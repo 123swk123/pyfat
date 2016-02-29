@@ -1,11 +1,30 @@
 import struct
 
+class FATDirectoryEntry(object):
+    def __init__(self):
+        self.initialized = False
+
+    def parse(self, instr):
+        if self.initialized:
+            raise Exception("This directory entry is already initialized")
+
+        if len(instr) != 32:
+            raise Exception("Expected 32 bytes for the directory entry")
+
+        (self.filename, self.extension, self.attributes, unused1,
+         self.creation_time, self.creation_date, self.last_access_date, unused2,
+         self.last_write_time, self.last_write_date, self.first_logical_cluster,
+         self.file_size) = struct.unpack("=8s3sBHHHHHHHHL", instr)
+
+        self.initialized = True
+
 class PyFat(object):
     FAT12 = 0
     FAT16 = 1
     FAT32 = 2
 
     def __init__(self):
+        self.root_dir_entries = []
         self.initialized = False
 
     def open(self, infp):
@@ -59,6 +78,9 @@ class PyFat(object):
         if self.num_fats != 2:
             raise Exception("Expected 2 FATs")
 
+        if self.max_root_dir_entries != 224:
+            raise Exception("Expected 224 root directory entries")
+
         if self.drive_num not in [0x00, 0x80]:
             raise Exception("Invalid drive number")
 
@@ -89,6 +111,7 @@ class PyFat(object):
         data_sec = total_sectors - (self.reserved_sectors + (self.num_fats * fat_size) + root_dir_sectors)
         count_of_clusters = data_sec / self.sectors_per_cluster
 
+        print "Count of clusters %d (MAX %d)" % (count_of_clusters, count_of_clusters + 1)
         if count_of_clusters < 4085:
             self.fat_type = self.FAT12
         elif count_of_clusters < 65525:
@@ -104,6 +127,23 @@ class PyFat(object):
 
         if first_fat != second_fat:
             raise Exception("The first FAT and second FAT do not agree; corrupt FAT filesystem")
+
+        # Now walk the root directory entry
+        read = 0
+        while read < (512 * 14):
+            dir_entry = infp.read(32)
+            read += 32
+
+            if dir_entry[0] == 0x0:
+                # Empty dir entry, done reading
+                break
+            elif dir_entry[0] == 0xe5:
+                # Empty dir entry, skip to next one
+                continue
+
+            ent = FATDirectoryEntry()
+            ent.parse(dir_entry)
+            self.root_dir_entries.append(ent)
 
         self.initialized = True
 
