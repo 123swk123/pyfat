@@ -172,9 +172,12 @@ class PyFat(object):
 
         self.initialized = True
 
-    def new(self):
+    def new(self, size=1440):
         if self.initialized:
             raise Exception("This object is already initialized")
+
+        if size != 1440:
+            raise Exception("Only size 1440 disks supported")
 
     def close(self):
         if not self.initialized:
