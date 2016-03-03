@@ -18,6 +18,7 @@ class FATDirectoryEntry(object):
          self.file_size) = struct.unpack("=8s3sBHHHHHHHHL", instr)
 
         self.parent = parent
+        self.children = []
 
         self.initialized = True
 
@@ -27,34 +28,22 @@ class FATDirectoryEntry(object):
 
         return self.attributes & 0x10
 
-class FATDirectory(object):
-    def __init__(self):
-        self.children = []
-        self.initialized = False
+    def add_child(self, child):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
 
-    def parse(self, instr, parent):
-        if self.initialized:
-            raise Exception("This FAT directory is already initialized")
+        self.children.append(child)
 
-        read = 0
-        while read < len(instr):
-            dir_entry = instr[read:read+32]
-            read += 32
+    def set_data(self, data):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
 
-            if dir_entry[0] == 0x0:
-                # Empty dir entry, done reading
-                break
-            elif dir_entry[0] == 0xe5:
-                # Empty dir entry, skip to next one
-                continue
+        self.data = data
 
-            ent = FATDirectoryEntry()
-            ent.parse(dir_entry, self)
-            self.children.append(ent)
-
-        self.parent = parent
-
-        self.initialized = True
+    def get_cluster(self):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
+        return self.first_logical_cluster
 
 class PyFat(object):
     FAT12 = 0
@@ -166,11 +155,66 @@ class PyFat(object):
         if first_fat != second_fat:
             raise Exception("The first FAT and second FAT do not agree; corrupt FAT filesystem")
 
+        self.fat = first_fat
+
         # Now walk the root directory entry
-        self.root_dir = FATDirectory()
-        self.root_dir.parse(infp.read(512 * 14), None)
+        root = FATDirectoryEntry()
+        root.parse('           \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None)
+        root.set_data(infp.read(512*14))
+
+        dirs = collections.deque([root])
+        while dirs:
+            currdir = dirs.popleft()
+
+            read = 0
+            while read < len(currdir.data):
+                dir_entry = currdir.data[read:read+32]
+                read += 32
+
+                if dir_entry[0] == '\x00':
+                    # Empty dir entry, done reading
+                    break
+                elif dir_entry[0] == '\xe5':
+                    # Empty dir entry, skip to next one
+                    continue
+
+                ent = FATDirectoryEntry()
+                ent.parse(dir_entry, currdir)
+                print ent.filename
+                if ent.is_dir():
+                    ent.set_data(self._read_dir_from_fat(ent.get_cluster()))
+                    currdir.add_child(ent)
+                    dirs.append(ent)
 
         self.initialized = True
+
+    def _read_dir_from_fat(self, infp, first_logical_cluster):
+        clusters = [first_logical_cluster]
+
+        curr = first_logical_cluster
+        while True:
+            offset = (3*curr)/2
+            if curr % 2 == 0:
+                # even
+                low,high = struct.unpack("=BB", self.fat[offset:offset+1])
+                fat_entry = (high << 4) & (low & 0x0f)
+            else:
+                # odd
+                low,high = struct.unpack("=BB", self.fat[offset:offset+1])
+                fat_entry = (high << 4) & (low >> 4)
+
+            print "Fat entry is 0x%x" % (fat_entry)
+            if fat_entry in ['\xff8', '\xff9', '\xffa', '\xffb', '\xffc', '\xffd', '\xffe', '\xfff']:
+                # This is the end!
+                break
+            else:
+                clusters.append(fat_entry)
+
+        data = ''
+        for cluster in clusters:
+            data += infp.seek(cluster * 512)
+
+        return data
 
     def new(self, size=1440):
         if self.initialized:
