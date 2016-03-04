@@ -117,26 +117,6 @@ class PyFat(object):
 
         self.jmp_boot2 = struct.unpack(">L", self.jmp_boot + '\x00')
 
-        print "Jmp Boot: 0x%x" % (self.jmp_boot2)
-        print "OEM Name: %s" % (self.oem_name)
-        print "Bytes per sector: %d" % (self.bytes_per_sector)
-        print "Sectors per cluster: %d" % (self.sectors_per_cluster)
-        print "Reserved sectors: %d" % (self.reserved_sectors)
-        print "Number of FATs: %d" % (self.num_fats)
-        print "Maximum Root Directory Entries: %d" % (self.max_root_dir_entries)
-        print "Sector Count: %d" % (self.sector_count)
-        print "Media: 0x%x" % (self.media)
-        print "Sectors Per FAT: %d" % (self.sectors_per_fat)
-        print "Sectors Per Track: %d" % (self.sectors_per_track)
-        print "Number of Heads: %d" % (self.num_heads)
-        print "Hidden Sectors: %d" % (self.hidden_sectors)
-        print "Total Sector Count FAT32: %d" % (self.total_sector_count_32)
-        print "Drive number: %d" % (self.drive_num)
-        print "Boot Signature: %d" % (self.boot_sig)
-        print "Volume ID: %d" % (self.volume_id)
-        print "Volume Label: %s" % (self.volume_label)
-        print "FS Type: '%s'" % (self.fs_type)
-
         # FIXME: check that jmp_boot is 0xeb, 0x??, 0x90
 
         if self.bytes_per_sector != 512:
@@ -186,7 +166,6 @@ class PyFat(object):
         data_sec = total_sectors - (self.reserved_sectors + (self.num_fats * fat_size) + root_dir_sectors)
         count_of_clusters = data_sec / self.sectors_per_cluster
 
-        print "Count of clusters %d (MAX %d)" % (count_of_clusters, count_of_clusters + 1)
         if count_of_clusters < 4085:
             self.fat_type = self.FAT12
         elif count_of_clusters < 65525:
@@ -232,7 +211,6 @@ class PyFat(object):
 
                 ent = FATDirectoryEntry()
                 ent.parse(dir_entry, currdir)
-                print ent.filename
                 currdir.add_child(ent)
                 ent.add_to_cluster_list_from_fat(first_fat)
                 if ent.is_dir():
@@ -286,11 +264,11 @@ class PyFat(object):
             self.infp.seek(cluster * 512)
             outfp.write(self.infp.read(512))
 
-    def new(self, size=1440):
+    def new(self, size_in_kb=1440):
         if self.initialized:
             raise Exception("This object is already initialized")
 
-        if size != 1440:
+        if size_in_kb != 1440:
             raise Exception("Only size 1440 disks supported")
 
     def write(self, outfp):
