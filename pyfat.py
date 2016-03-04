@@ -80,7 +80,7 @@ class PyFat(object):
          self.sector_count, self.media, self.sectors_per_fat,
          self.sectors_per_track, self.num_heads, self.hidden_sectors,
          self.total_sector_count_32, self.drive_num, unused1, self.boot_sig, self.volume_id,
-         self.volume_label, self.fs_type, unused2, sig) = struct.unpack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH", boot_sector)
+         self.volume_label, self.fs_type, self.boot_code, sig) = struct.unpack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH", boot_sector)
 
         self.jmp_boot2 = struct.unpack(">L", self.jmp_boot + '\x00')
 
@@ -282,6 +282,23 @@ class PyFat(object):
 
         if size != 1440:
             raise Exception("Only size 1440 disks supported")
+
+    def write(self, outfp):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        outfp.seek(0)
+        outfp.write(struct.pack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH", self.jmp_boot,
+                                self.oem_name, self.bytes_per_sector,
+                                self.sectors_per_cluster, self.reserved_sectors,
+                                self.num_fats, self.max_root_dir_entries,
+                                self.sector_count, self.media,
+                                self.sectors_per_fat,
+                                self.sectors_per_track, self.num_heads,
+                                self.hidden_sectors,
+                                self.total_sector_count_32, self.drive_num,
+                                0, self.boot_sig, self.volume_id,
+                                self.volume_label, self.fs_type, self.boot_code, 0xaa55))
 
     def close(self):
         if not self.initialized:
