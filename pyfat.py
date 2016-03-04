@@ -95,9 +95,12 @@ class PyFat(object):
         self.root_dir_entries = []
         self.initialized = False
 
-    def open(self, infp):
+    def open(self, infp, size_in_kb):
         if self.initialized:
             raise Exception("This object is already initialized")
+
+        if size_in_kb != 1440:
+            raise Exception("Only 1.44MB floppy disks supported")
 
         self.infp = infp
 
@@ -165,6 +168,8 @@ class PyFat(object):
 
         if sig != 0xaa55:
             raise Exception("Invalid signature")
+
+        self.size_in_kb = size_in_kb
 
         # The following determines whether this is FAT12, FAT16, or FAT32
         root_dir_sectors = ((self.max_root_dir_entries * 32) + (self.bytes_per_sector - 1)) / self.bytes_per_sector
@@ -364,6 +369,8 @@ class PyFat(object):
 
                 outfp.write(child.directory_record())
                 cluster_offset += 32
+
+        outfp.truncate(self.size_in_kb * 1024)
 
     def close(self):
         if not self.initialized:
