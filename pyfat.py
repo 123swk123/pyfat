@@ -34,6 +34,26 @@ class FATDirectoryEntry(object):
 
         self.initialized = True
 
+    def new_root(self):
+        if self.initialized:
+            raise Exception("This directory entry is already initialized")
+
+        self.filename = '        '
+        self.extension = '   '
+        self.attributes = 0
+        self.creation_time = 0
+        self.creation_date = 0
+        self.last_access_date = 0
+        self.last_write_time = 0
+        self.last_write_date = 0
+        self.first_logical_cluster = 0
+        self.file_size = 0
+
+        self.parent = None
+        self.children = []
+
+        self.initialized = True
+
     def is_dir(self):
         if not self.initialized:
             raise Exception("This directory entry is not yet initialized")
@@ -91,6 +111,9 @@ class PyFat(object):
     FAT16 = 1
     FAT32 = 2
 
+    # This boot code was taken from dosfstools
+    BOOT_CODE = "\x0e\x1f\xbe\x5b\x7c\xac\x22\xc0\x74\x0b\x56\xb4\x0e\xbb\x07\x00\xcd\x10\x5e\xeb\xf0\x32\xe4\xcd\x16\xcd\x19\xeb\xfeThis is not a bootable disk.  Please insert a bootable floppy and\r\npress any key to try again ... \r\n"
+
     def __init__(self):
         self.root_dir_entries = []
         self.initialized = False
@@ -108,12 +131,13 @@ class PyFat(object):
 
         boot_sector = infp.read(512)
 
-        (self.jmp_boot, self.oem_name, self.bytes_per_sector, self.sectors_per_cluster,
-         self.reserved_sectors, self.num_fats, self.max_root_dir_entries,
-         self.sector_count, self.media, self.sectors_per_fat,
-         self.sectors_per_track, self.num_heads, self.hidden_sectors,
-         self.total_sector_count_32, self.drive_num, unused1, self.boot_sig, self.volume_id,
-         self.volume_label, self.fs_type, self.boot_code, sig) = struct.unpack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH", boot_sector)
+        (self.jmp_boot, self.oem_name, self.bytes_per_sector,
+         self.sectors_per_cluster, self.reserved_sectors, self.num_fats,
+         self.max_root_dir_entries, self.sector_count, self.media,
+         self.sectors_per_fat, self.sectors_per_track, self.num_heads,
+         self.hidden_sectors, self.total_sector_count_32, self.drive_num,
+         unused1, self.boot_sig, self.volume_id, self.volume_label,
+         self.fs_type, self.boot_code, sig) = struct.unpack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH", boot_sector)
 
         self.jmp_boot2 = struct.unpack(">L", self.jmp_boot + '\x00')
 
@@ -270,6 +294,36 @@ class PyFat(object):
 
         if size_in_kb != 1440:
             raise Exception("Only size 1440 disks supported")
+
+        self.jmp_boot = '\x00\xeb\x3c\x90'
+        self.oem_name = 'pyfat   '
+        self.bytes_per_sector = 512
+        self.sectors_per_cluster = 1
+        self.reserved_sectors = 1
+        self.num_fats = 2
+        self.max_root_dir_entries = 224
+        self.sector_count = 2880
+        self.media = 0xf0
+        self.sectors_per_fat = 9
+        self.sectors_per_track = 18
+        self.num_heads = 2
+        self.hidden_sectors = 0
+        self.total_sector_count_32 = 0
+        self.drive_num = 0
+        self.boot_sig = 41
+        self.volume_id = 4248983325
+        self.volume_label = "NO NAME    "
+        self.fs_type = "FAT12   "
+        self.boot_code = self.BOOT_CODE
+
+        self.root = FATDirectoryEntry()
+        self.root.new_root()
+        for i in range(19, 19+14):
+            self.root.add_to_cluster_list(i)
+
+        self.size_in_kb = size_in_kb
+
+        self.initialized = True
 
     def write(self, outfp):
         if not self.initialized:
