@@ -370,6 +370,25 @@ class PyFat(object):
                 outfp.write(child.directory_record())
                 cluster_offset += 32
 
+                if child.is_dir():
+                    dirs.append(child)
+
+        # Now write out the files
+        dirs = collections.deque([self.root])
+        while dirs:
+            currdir = dirs.popleft()
+
+            for child in currdir.children:
+                if child.is_dir():
+                    dirs.append(child)
+                else:
+                    # An actual file we have to write out
+                    for cluster in child.physical_clusters:
+                        self.infp.seek(cluster * 512)
+                        outfp.seek(cluster * 512)
+                        outfp.write(self.infp.read(512))
+
+        # Finally, truncate the file out to its final size
         outfp.truncate(self.size_in_kb * 1024)
 
     def close(self):
