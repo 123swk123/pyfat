@@ -1,6 +1,17 @@
 import struct
 import collections
 
+def hexdump(st):
+    '''
+    A utility function to print a string in hex.
+
+    Parameters:
+     st - The string to print.
+    Returns:
+     A string containing the hexadecimal representation of the input string.
+    '''
+    return ':'.join(x.encode('hex') for x in st)
+
 class FATDirectoryEntry(object):
     def __init__(self):
         self.initialized = False
@@ -57,6 +68,8 @@ class PyFat(object):
     def open(self, infp):
         if self.initialized:
             raise Exception("This object is already initialized")
+
+        self.infp = infp
 
         infp.seek(0)
 
@@ -158,11 +171,11 @@ class PyFat(object):
         self.fat = first_fat
 
         # Now walk the root directory entry
-        root = FATDirectoryEntry()
-        root.parse('           \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None)
-        root.set_data(infp.read(512*14))
+        self.root = FATDirectoryEntry()
+        self.root.parse('           \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None)
+        self.root.set_data(infp.read(512*14))
 
-        dirs = collections.deque([root])
+        dirs = collections.deque([self.root])
         while dirs:
             currdir = dirs.popleft()
 
@@ -181,14 +194,14 @@ class PyFat(object):
                 ent = FATDirectoryEntry()
                 ent.parse(dir_entry, currdir)
                 print ent.filename
+                currdir.add_child(ent)
                 if ent.is_dir():
-                    ent.set_data(self._read_dir_from_fat(ent.get_cluster()))
-                    currdir.add_child(ent)
+                    ent.set_data(self._read_data_from_fat(ent.get_cluster()))
                     dirs.append(ent)
 
         self.initialized = True
 
-    def _read_dir_from_fat(self, infp, first_logical_cluster):
+    def _read_data_from_fat(self, infp, first_logical_cluster):
         clusters = [first_logical_cluster]
 
         curr = first_logical_cluster
@@ -196,15 +209,16 @@ class PyFat(object):
             offset = (3*curr)/2
             if curr % 2 == 0:
                 # even
-                low,high = struct.unpack("=BB", self.fat[offset:offset+1])
-                fat_entry = (high << 4) & (low & 0x0f)
+                low,high = struct.unpack("=BB", self.fat[offset:offset+2])
+                print "0x%x 0x%x" % (low, high)
+                fat_entry = ((high & 0x0f) << 8) | (low)
             else:
                 # odd
-                low,high = struct.unpack("=BB", self.fat[offset:offset+1])
-                fat_entry = (high << 4) & (low >> 4)
+                low,high = struct.unpack("=BB", self.fat[offset:offset+2])
+                fat_entry = (high << 4) | (low >> 4)
 
-            print "Fat entry is 0x%x" % (fat_entry)
-            if fat_entry in ['\xff8', '\xff9', '\xffa', '\xffb', '\xffc', '\xffd', '\xffe', '\xfff']:
+            print "0x%x" % (fat_entry)
+            if fat_entry in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
                 # This is the end!
                 break
             else:
@@ -212,9 +226,55 @@ class PyFat(object):
 
         data = ''
         for cluster in clusters:
-            data += infp.seek(cluster * 512)
+            print "Cluster %d" % (cluster)
+            infp.seek((33 + cluster - 2) * 512)
+            data += infp.read(512)
 
         return data
+
+    def _find_record(self, path):
+        if path[0] != '/':
+            raise Exception("Must be a path starting with /")
+
+        if path == '/':
+            raise Exception("Cannot write data from the root")
+
+       # Split the path along the slashes
+        splitpath = path.split('/')
+        # Skip past the first one, since it is always empty.
+        splitindex = 1
+
+        currpath = splitpath[splitindex]
+        splitindex += 1
+        children = self.root.children
+        index = 0
+        while index < len(children):
+            child = children[index]
+            index += 1
+
+            if child.filename.rstrip() != currpath:
+                continue
+
+            if splitindex == len(splitpath):
+                # We have to remove one from the index since we incremented it
+                # above.
+                return child,index-1
+            else:
+                if child.is_dir():
+                    children = child.children
+                    index = 0
+                    currpath = splitpath[splitindex]
+                    splitindex += 1
+
+        raise Exception("Could not find path %s" % (path))
+
+    def get_and_write_file(self, path, outfp):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        child,index = self._find_record(path)
+
+        outfp.write(self._read_data_from_fat(self.infp, child.first_logical_cluster)[:child.file_size])
 
     def new(self, size=1440):
         if self.initialized:
