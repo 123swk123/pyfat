@@ -49,9 +49,13 @@ class FATDirectoryEntry(object):
     def add_to_cluster_list(self, cluster):
         if not self.initialized:
             raise Exception("This directory entry is not yet initialized")
+
         self.physical_clusters.append(cluster)
 
     def add_to_cluster_list_from_fat(self, fat):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
+
         curr = self.first_logical_cluster
         self.physical_clusters.append(33 + curr - 2)
         while True:
@@ -72,7 +76,15 @@ class FATDirectoryEntry(object):
                 self.physical_clusters.append(33 + fat_entry - 2)
                 curr = fat_entry
 
-        print self.physical_clusters
+    def directory_record(self):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
+
+        return struct.pack("=8s3sBHHHHHHHHL", self.filename, self.extension,
+                           self.attributes, 0, self.creation_time,
+                           self.creation_date, self.last_access_date, 0,
+                           self.last_write_time, self.last_write_date,
+                           self.first_logical_cluster, self.file_size)
 
 class PyFat(object):
     FAT12 = 0
@@ -336,6 +348,22 @@ class PyFat(object):
         # Now write out the second FAT
         outfp.seek(10 * 512)
         outfp.write(''.join(fat_string))
+
+        # Now write out the directory entries
+        dirs = collections.deque([self.root])
+        while dirs:
+            currdir = dirs.popleft()
+
+            cluster_iter = iter(currdir.physical_clusters)
+            outfp.seek(cluster_iter.next() * 512)
+            cluster_offset = 0
+            for child in currdir.children:
+                if cluster_offset + 32 > 512:
+                    cluster_offset = 0
+                    outfp.seek(cluster_iter.next() * 512)
+
+                outfp.write(child.directory_record())
+                cluster_offset += 32
 
     def close(self):
         if not self.initialized:
