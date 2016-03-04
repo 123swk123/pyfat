@@ -280,9 +280,8 @@ class PyFat(object):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
 
-        outfp.seek(0)
-
         # First write out the boot entry
+        outfp.seek(0 * 512)
         outfp.write(struct.pack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH", self.jmp_boot,
                                 self.oem_name, self.bytes_per_sector,
                                 self.sectors_per_cluster, self.reserved_sectors,
@@ -294,6 +293,49 @@ class PyFat(object):
                                 self.total_sector_count_32, self.drive_num,
                                 0, self.boot_sig, self.volume_id,
                                 self.volume_label, self.fs_type, self.boot_code, 0xaa55))
+
+        # Now build up the FAT
+        fat = [0] * 9 * 512
+        fat[0] = 0xf0
+        fat[1] = 0xff
+        fat[2] = 0xff
+        dirs = collections.deque([self.root])
+        while dirs:
+            currdir = dirs.popleft()
+
+            for child in currdir.children:
+                for index,cluster in enumerate(child.physical_clusters):
+                    logical_cluster = cluster + 2 - 33
+                    if index == len(child.physical_clusters) - 1:
+                        # last cluster, needs to be \xfff
+                        val = 0xfff
+                    else:
+                        # not the last cluster, look one ahead
+                        val = child.physical_clusters[index + 1]
+
+                    offset = (3 * logical_cluster) / 2
+                    if logical_cluster % 2 == 0:
+                        # even
+                        fat[offset] = val & 0xff
+                        fat[offset + 1] |= (val >> 8)
+                    else:
+                        # odd
+                        fat[offset] |= (val >> 4)
+                        fat[offset + 1] = val & 0xff
+
+                if child.is_dir():
+                    dirs.append(child)
+
+        fat_fmt = "=" + "B"*9*512
+        fat_string = struct.pack(fat_fmt, *fat)
+
+        # Now write out the first FAT
+        outfp.seek(1 * 512)
+        outfp.write(''.join(fat_string))
+
+        # Now write out the second FAT
+        outfp.seek(10 * 512)
+        outfp.write(''.join(fat_string))
 
     def close(self):
         if not self.initialized:
