@@ -17,7 +17,7 @@ class FATDirectoryEntry(object):
         self.initialized = False
         self.physical_clusters = []
 
-    def parse(self, instr, parent):
+    def parse(self, instr, parent, data_fp):
         if self.initialized:
             raise Exception("This directory entry is already initialized")
 
@@ -31,6 +31,8 @@ class FATDirectoryEntry(object):
 
         self.parent = parent
         self.children = []
+
+        self.data_fp = data_fp
 
         self.initialized = True
 
@@ -54,9 +56,11 @@ class FATDirectoryEntry(object):
 
         self.initialized = True
 
-    def new(self):
+    def new(self, infp, parent):
         if not self.initialized:
             raise Exception("This directory entry is not yet initialized")
+
+        self.data_fp = data_fp
 
     def is_dir(self):
         if not self.initialized:
@@ -79,6 +83,12 @@ class FATDirectoryEntry(object):
                            self.creation_date, self.last_access_date, 0,
                            self.last_write_time, self.last_write_date,
                            self.first_logical_cluster, self.file_size)
+
+    def get_data_fp(self):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
+
+        return self.data_fp
 
 class PyFat(object):
     FAT12 = 0
@@ -184,7 +194,7 @@ class PyFat(object):
 
         # Now walk the root directory entry
         self.root = FATDirectoryEntry()
-        self.root.parse('           \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None)
+        self.root.parse('           \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None, infp)
         root_cluster_list = []
         for i in range(19, 19+14):
             root_cluster_list.append(i)
@@ -212,7 +222,7 @@ class PyFat(object):
                     continue
 
                 ent = FATDirectoryEntry()
-                ent.parse(dir_entry, currdir)
+                ent.parse(dir_entry, currdir, infp)
                 currdir.add_child(ent)
                 if ent.is_dir():
                     dirs.append((ent, _get_cluster_list_from_fat(ent.first_logical_cluster)))
@@ -285,9 +295,11 @@ class PyFat(object):
 
         child,index = self._find_record(path)
 
+        data_fp = child.get_data_fp()
+
         for cluster in self._get_cluster_list_from_fat(child.first_logical_cluster):
-            self.infp.seek(cluster * 512)
-            outfp.write(self.infp.read(512))
+            data_fp.seek(cluster * 512)
+            outfp.write(data_fp.read(512))
 
     def new(self, size_in_kb=1440):
         if self.initialized:
@@ -351,6 +363,8 @@ class PyFat(object):
 
         name,parent = self._name_and_parent_from_index(filename)
 
+        parent.add_child(child)
+
     def write(self, outfp):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
@@ -409,11 +423,13 @@ class PyFat(object):
                 if child.is_dir():
                     dirs.append(child)
                 else:
+                    data_fp = child.get_data_fp()
+
                     # An actual file we have to write out
                     for cluster in self._get_cluster_list_from_fat(child.first_logical_cluster):
-                        self.infp.seek(cluster * 512)
+                        data_fp.seek(cluster * 512)
                         outfp.seek(cluster * 512)
-                        outfp.write(self.infp.read(512))
+                        outfp.write(data_fp.read(512))
 
         # Finally, truncate the file out to its final size
         outfp.truncate(self.size_in_kb * 1024)
