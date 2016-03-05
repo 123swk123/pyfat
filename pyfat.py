@@ -54,6 +54,10 @@ class FATDirectoryEntry(object):
 
         self.initialized = True
 
+    def new(self):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
+
     def is_dir(self):
         if not self.initialized:
             raise Exception("This directory entry is not yet initialized")
@@ -65,36 +69,6 @@ class FATDirectoryEntry(object):
             raise Exception("This directory entry is not yet initialized")
 
         self.children.append(child)
-
-    def add_to_cluster_list(self, cluster):
-        if not self.initialized:
-            raise Exception("This directory entry is not yet initialized")
-
-        self.physical_clusters.append(cluster)
-
-    def add_to_cluster_list_from_fat(self, fat):
-        if not self.initialized:
-            raise Exception("This directory entry is not yet initialized")
-
-        curr = self.first_logical_cluster
-        self.physical_clusters.append(33 + curr - 2)
-        while True:
-            offset = (3*curr)/2
-            if curr % 2 == 0:
-                # even
-                low,high = struct.unpack("=BB", fat[offset:offset+2])
-                fat_entry = ((high & 0x0f) << 8) | (low)
-            else:
-                # odd
-                low,high = struct.unpack("=BB", fat[offset:offset+2])
-                fat_entry = (high << 4) | (low >> 4)
-
-            if fat_entry in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
-                # This is the end!
-                break
-            else:
-                self.physical_clusters.append(33 + fat_entry - 2)
-                curr = fat_entry
 
     def directory_record(self):
         if not self.initialized:
@@ -206,18 +180,22 @@ class PyFat(object):
         if first_fat != second_fat:
             raise Exception("The first FAT and second FAT do not agree; corrupt FAT filesystem")
 
+        self.fat = first_fat
+
         # Now walk the root directory entry
         self.root = FATDirectoryEntry()
         self.root.parse('           \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None)
+        root_cluster_list = []
         for i in range(19, 19+14):
-            self.root.add_to_cluster_list(i)
+            root_cluster_list.append(i)
 
-        dirs = collections.deque([self.root])
+        dirs = collections.deque([(self.root, root_cluster_list)])
         while dirs:
-            currdir = dirs.popleft()
+            currdir,cluster_list = dirs.popleft()
 
+            # Read all of the data for this directory
             data = ''
-            for cluster in currdir.physical_clusters:
+            for cluster in cluster_list:
                 infp.seek(cluster * 512)
                 data += infp.read(512)
 
@@ -236,11 +214,34 @@ class PyFat(object):
                 ent = FATDirectoryEntry()
                 ent.parse(dir_entry, currdir)
                 currdir.add_child(ent)
-                ent.add_to_cluster_list_from_fat(first_fat)
                 if ent.is_dir():
-                    dirs.append(ent)
+                    dirs.append((ent, _get_cluster_list_from_fat(ent.first_logical_cluster)))
 
         self.initialized = True
+
+    def _get_cluster_list_from_fat(self, first_logical_cluster):
+        curr = first_logical_cluster
+        physical_clusters = []
+        physical_clusters.append(33 + curr - 2)
+        while True:
+            offset = (3*curr)/2
+            if curr % 2 == 0:
+                # even
+                low,high = struct.unpack("=BB", self.fat[offset:offset+2])
+                fat_entry = ((high & 0x0f) << 8) | (low)
+            else:
+                # odd
+                low,high = struct.unpack("=BB", self.fat[offset:offset+2])
+                fat_entry = (high << 4) | (low >> 4)
+
+            if fat_entry in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+                # This is the end!
+                break
+            else:
+                physical_clusters.append(33 + fat_entry - 2)
+                curr = fat_entry
+
+        return physical_clusters
 
     def _find_record(self, path):
         if path[0] != '/':
@@ -284,7 +285,7 @@ class PyFat(object):
 
         child,index = self._find_record(path)
 
-        for cluster in child.physical_clusters:
+        for cluster in self._get_cluster_list_from_fat(child.first_logical_cluster):
             self.infp.seek(cluster * 512)
             outfp.write(self.infp.read(512))
 
@@ -318,12 +319,37 @@ class PyFat(object):
 
         self.root = FATDirectoryEntry()
         self.root.new_root()
-        for i in range(19, 19+14):
-            self.root.add_to_cluster_list(i)
+
+        self.fat = '\xf0\xff\xff'
 
         self.size_in_kb = size_in_kb
 
         self.initialized = True
+
+    def _name_and_parent_from_path(self, path):
+        if path[0] != '/':
+            raise Exception("Must be a path starting with /")
+
+        # First we need to find the parent of this directory, and add this
+        # one as a child.
+        splitpath = path.split('/')
+        # Pop off the front, as it is always blank.
+        splitpath.pop(0)
+        # Now take the name off.
+        name = splitpath.pop()
+        if len(splitpath) == 0:
+            # This is a new directory under the root, add it there
+            parent = self.root
+        else:
+            parent,index = self._find_record('/' + '/'.join(splitpath))
+
+        return (name, parent)
+
+    def add_fp(self, filename, infp, length):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        name,parent = self._name_and_parent_from_index(filename)
 
     def write(self, outfp):
         if not self.initialized:
@@ -343,55 +369,24 @@ class PyFat(object):
                                 0, self.boot_sig, self.volume_id,
                                 self.volume_label, self.fs_type, self.boot_code, 0xaa55))
 
-        # Now build up the FAT
-        fat = [0] * 9 * 512
-        fat[0] = 0xf0
-        fat[1] = 0xff
-        fat[2] = 0xff
-        dirs = collections.deque([self.root])
-        while dirs:
-            currdir = dirs.popleft()
-
-            for child in currdir.children:
-                for index,cluster in enumerate(child.physical_clusters):
-                    logical_cluster = cluster + 2 - 33
-                    if index == len(child.physical_clusters) - 1:
-                        # last cluster, needs to be \xfff
-                        val = 0xfff
-                    else:
-                        # not the last cluster, look one ahead
-                        val = child.physical_clusters[index + 1]
-
-                    offset = (3 * logical_cluster) / 2
-                    if logical_cluster % 2 == 0:
-                        # even
-                        fat[offset] = val & 0xff
-                        fat[offset + 1] |= (val >> 8)
-                    else:
-                        # odd
-                        fat[offset] |= (val >> 4)
-                        fat[offset + 1] = val & 0xff
-
-                if child.is_dir():
-                    dirs.append(child)
-
-        fat_fmt = "=" + "B"*9*512
-        fat_string = struct.pack(fat_fmt, *fat)
-
         # Now write out the first FAT
         outfp.seek(1 * 512)
-        outfp.write(''.join(fat_string))
+        outfp.write(self.fat)
 
         # Now write out the second FAT
         outfp.seek(10 * 512)
-        outfp.write(''.join(fat_string))
+        outfp.write(self.fat)
 
         # Now write out the directory entries
-        dirs = collections.deque([self.root])
-        while dirs:
-            currdir = dirs.popleft()
+        root_cluster_list = []
+        for i in range(19, 19+14):
+            root_cluster_list.append(i)
 
-            cluster_iter = iter(currdir.physical_clusters)
+        dirs = collections.deque([(self.root, root_cluster_list)])
+        while dirs:
+            currdir,physical_clusters = dirs.popleft()
+
+            cluster_iter = iter(physical_clusters)
             outfp.seek(cluster_iter.next() * 512)
             cluster_offset = 0
             for child in currdir.children:
@@ -415,7 +410,7 @@ class PyFat(object):
                     dirs.append(child)
                 else:
                     # An actual file we have to write out
-                    for cluster in child.physical_clusters:
+                    for cluster in self._get_cluster_list_from_fat(child.first_logical_cluster):
                         self.infp.seek(cluster * 512)
                         outfp.seek(cluster * 512)
                         outfp.write(self.infp.read(512))
