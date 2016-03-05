@@ -1,5 +1,6 @@
 import struct
 import collections
+import os
 
 def hexdump(st):
     '''
@@ -56,9 +57,26 @@ class FATDirectoryEntry(object):
 
         self.initialized = True
 
-    def new(self, infp, parent):
-        if not self.initialized:
-            raise Exception("This directory entry is not yet initialized")
+    def new_file(self, infp, parent, filename, extension):
+        if self.initialized:
+            raise Exception("This directory entry is already initialized")
+
+        if len(filename) > 8:
+            raise Exception("Filename is too long (must be 8 or shorter)")
+
+        if len(extension) > 3:
+            raise Exception("Extension is too long (must be 3 or shorter)")
+
+        self.filename = filename
+        self.extension = extension
+        self.attributes = 0
+        self.creation_time = 0
+        self.creation_date = 0
+        self.last_access_date = 0
+        self.last_write_time = 0
+        self.last_write_date = 0
+        self.first_logical_cluster = 0
+        self.file_size = 0
 
         self.data_fp = data_fp
 
@@ -357,11 +375,16 @@ class PyFat(object):
 
         return (name, parent)
 
-    def add_fp(self, filename, infp, length):
+    def add_fp(self, path, infp, length):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
 
-        name,parent = self._name_and_parent_from_index(filename)
+        filename,parent = self._name_and_parent_from_index(path)
+
+        name,ext = os.path.splitext(filename)
+
+        child = FATDirectoryEntry()
+        child.new_file(infp, parent, name, ext)
 
         parent.add_child(child)
 
