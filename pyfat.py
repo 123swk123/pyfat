@@ -163,6 +163,18 @@ class FAT12(object):
 
         self.initialized = True
 
+    def new(self):
+        if self.initialized:
+            raise Exception("This object is already initialized")
+
+        total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) / bytes per entry (1.5)
+
+        self.fat = [0x0]*int(total_entries)
+        self.fat[0] = 0xf0
+        self.fat[1] = 0xff
+
+        self.initialized = True
+
     def get_cluster_list(self, first_logical_cluster):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
@@ -412,7 +424,8 @@ class PyFat(object):
         self.root = FATDirectoryEntry()
         self.root.new_root()
 
-        self.fat = '\xf0\xff\xff'
+        self.fat = FAT12()
+        self.fat.new()
 
         self.size_in_kb = size_in_kb
 
