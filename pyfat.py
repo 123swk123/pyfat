@@ -180,6 +180,36 @@ class FAT12(object):
 
         return physical_clusters
 
+    def record(self):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        ret = '\xf0\xff'
+
+        for index,fat_entry in enumerate(self.fat[2:]):
+            offset = (3*index)/2
+            if curr % 2 == 0:
+                # even
+                low = 0
+                high = 0
+                ret += struct.pack("=BB", low, high)
+
+                #low,high = struct.unpack("=BB", fatstring[offset:offset+2])
+                #fat_entry = ((high & 0x0f) << 8) | (low)
+            else:
+                # odd
+                low = 0
+                high = 0
+                ret += struct.pack("=BB", low, high)
+
+                #low,high = struct.unpack("=BB", fatstring[offset:offset+2])
+                #fat_entry = (high << 4) | (low >> 4)
+
+            self.fat[curr] = fat_entry
+            curr += 1
+
+        return ret
+
 class PyFat(object):
     FAT12 = 0
     FAT16 = 1
@@ -485,11 +515,11 @@ class PyFat(object):
 
         # Now write out the first FAT
         outfp.seek(1 * 512)
-        outfp.write(self.fat)
+        outfp.write(self.fat.record())
 
         # Now write out the second FAT
         outfp.seek(10 * 512)
-        outfp.write(self.fat)
+        outfp.write(self.fat.record())
 
         # Now write out the directory entries
         root_cluster_list = []
