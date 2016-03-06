@@ -133,6 +133,53 @@ class FATDirectoryEntry(object):
 
         return self.data_fp
 
+class FAT12(object):
+    def __init__(self):
+        self.initialized = False
+
+    def parse(self, fatstring):
+        if self.initialized:
+            raise Exception("This object is already initialized")
+
+        total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) * bytes per entry (1.5)
+
+        self.fat = [0x0]*int(total_entries)
+        self.fat[0] = 0xf0
+        self.fat[1] = 0xff
+
+        curr = 2
+        while curr < total_entries:
+            offset = (3*curr)/2
+            if curr % 2 == 0:
+                # even
+                low,high = struct.unpack("=BB", fatstring[offset:offset+2])
+                fat_entry = ((high & 0x0f) << 8) | (low)
+            else:
+                # odd
+                low,high = struct.unpack("=BB", fatstring[offset:offset+2])
+                fat_entry = (high << 4) | (low >> 4)
+
+            self.fat[curr] = fat_entry
+            curr += 1
+
+        self.initialized = True
+
+    def get_cluster_list(self, first_logical_cluster):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        physical_clusters = []
+        curr = first_logical_cluster
+        while True:
+            physical_clusters.append(33 + curr - 2)
+            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+                # This is the end!
+                break
+
+            curr = self.fat[curr]
+
+        return physical_clusters
+
 class PyFat(object):
     FAT12 = 0
     FAT16 = 1
@@ -233,7 +280,8 @@ class PyFat(object):
         if first_fat != second_fat:
             raise Exception("The first FAT and second FAT do not agree; corrupt FAT filesystem")
 
-        self.fat = self._parse_fat_from_string(first_fat)
+        self.fat = FAT12()
+        self.fat.parse(first_fat)
 
         # Now walk the root directory entry
         self.root = FATDirectoryEntry()
@@ -268,47 +316,9 @@ class PyFat(object):
                 ent.parse(dir_entry, currdir, infp)
                 currdir.add_child(ent)
                 if ent.is_dir():
-                    dirs.append((ent, _get_cluster_list_from_fat(ent.first_logical_cluster)))
+                    dirs.append((ent, self.fat.get_cluster_list(ent.first_logical_cluster)))
 
         self.initialized = True
-
-    def _parse_fat_from_string(self, fatstring):
-        total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) * bytes per entry (1.5)
-
-        fat = [0x0]*int(total_entries)
-        fat[0] = 0xf0
-        fat[1] = 0xff
-
-        curr = 2
-        while curr < total_entries:
-            #print curr
-            offset = (3*curr)/2
-            if curr % 2 == 0:
-                # even
-                low,high = struct.unpack("=BB", fatstring[offset:offset+2])
-                fat_entry = ((high & 0x0f) << 8) | (low)
-            else:
-                # odd
-                low,high = struct.unpack("=BB", fatstring[offset:offset+2])
-                fat_entry = (high << 4) | (low >> 4)
-
-            fat[curr] = fat_entry
-            curr += 1
-
-        return fat
-
-    def _get_cluster_list_from_fat(self, first_logical_cluster):
-        physical_clusters = []
-        curr = first_logical_cluster
-        while True:
-            physical_clusters.append(33 + curr - 2)
-            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
-                # This is the end!
-                break
-
-            curr = self.fat[curr]
-
-        return physical_clusters
 
     def _find_record(self, path):
         if path[0] != '/':
@@ -354,7 +364,7 @@ class PyFat(object):
 
         data_fp = child.get_data_fp()
 
-        for cluster in self._get_cluster_list_from_fat(child.first_logical_cluster):
+        for cluster in self.fat.get_cluster_list(child.first_logical_cluster):
             data_fp.seek(cluster * 512)
             outfp.write(data_fp.read(512))
 
