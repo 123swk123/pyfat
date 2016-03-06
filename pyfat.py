@@ -222,7 +222,7 @@ class FAT12(object):
             raise Exception("No space left on device")
 
         # Set the last cluster
-        self.fat[last] = 0xff
+        self.fat[last] = 0xfff
 
         return first_cluster
 
