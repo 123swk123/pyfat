@@ -233,7 +233,7 @@ class PyFat(object):
         if first_fat != second_fat:
             raise Exception("The first FAT and second FAT do not agree; corrupt FAT filesystem")
 
-        self.fat = first_fat
+        self.fat = self._parse_fat_from_string(first_fat)
 
         # Now walk the root directory entry
         self.root = FATDirectoryEntry()
@@ -272,28 +272,41 @@ class PyFat(object):
 
         self.initialized = True
 
-    def _get_cluster_list_from_fat(self, first_logical_cluster):
-        curr = first_logical_cluster
-        physical_clusters = []
-        physical_clusters.append(33 + curr - 2)
-        # FIXME: quit when we run out of offset
-        while True:
+    def _parse_fat_from_string(self, fatstring):
+        total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) * bytes per entry (1.5)
+
+        fat = [0x0]*int(total_entries)
+        fat[0] = 0xf0
+        fat[1] = 0xff
+
+        curr = 2
+        while curr < total_entries:
+            #print curr
             offset = (3*curr)/2
             if curr % 2 == 0:
                 # even
-                low,high = struct.unpack("=BB", self.fat[offset:offset+2])
+                low,high = struct.unpack("=BB", fatstring[offset:offset+2])
                 fat_entry = ((high & 0x0f) << 8) | (low)
             else:
                 # odd
-                low,high = struct.unpack("=BB", self.fat[offset:offset+2])
+                low,high = struct.unpack("=BB", fatstring[offset:offset+2])
                 fat_entry = (high << 4) | (low >> 4)
 
-            if fat_entry in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+            fat[curr] = fat_entry
+            curr += 1
+
+        return fat
+
+    def _get_cluster_list_from_fat(self, first_logical_cluster):
+        physical_clusters = []
+        curr = first_logical_cluster
+        while True:
+            physical_clusters.append(33 + curr - 2)
+            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
                 # This is the end!
                 break
-            else:
-                physical_clusters.append(33 + fat_entry - 2)
-                curr = fat_entry
+
+            curr = self.fat[curr]
 
         return physical_clusters
 
