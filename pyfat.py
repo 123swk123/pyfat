@@ -1,6 +1,7 @@
 import struct
 import collections
 import os
+import time
 
 def hexdump(st):
     '''
@@ -12,6 +13,22 @@ def hexdump(st):
      A string containing the hexadecimal representation of the input string.
     '''
     return ':'.join(x.encode('hex') for x in st)
+
+def ceiling_div(numer, denom):
+    '''
+    A function to do ceiling division; that is, dividing numerator by denominator
+    and taking the ceiling.
+
+    Parameters:
+     numer - The numerator for the division.
+     denom - The denominator for the division.
+    Returns:
+     The ceiling after dividing numerator by denominator.
+    '''
+    # Doing division and then getting the ceiling is tricky; we do upside-down
+    # floor division to make this happen.
+    # See https://stackoverflow.com/questions/14822184/is-there-a-ceiling-equivalent-of-operator-in-python.
+    return -(-numer // denom)
 
 class FATDirectoryEntry(object):
     def __init__(self):
@@ -57,7 +74,7 @@ class FATDirectoryEntry(object):
 
         self.initialized = True
 
-    def new_file(self, infp, parent, filename, extension):
+    def new_file(self, infp, length, parent, filename, extension, first_logical_cluster):
         if self.initialized:
             raise Exception("This directory entry is already initialized")
 
@@ -67,16 +84,24 @@ class FATDirectoryEntry(object):
         if len(extension) > 3:
             raise Exception("Extension is too long (must be 3 or shorter)")
 
+        tm = time.time()
+        local = time.localtime(tm)
+        year = local.tm_year - 1980
+        month = local.tm_mon
+        day = local.tm_mday
+
+        date = struct.pack("=H", (year << 9) | (month << 5) | (day & 0x1f))
+
         self.filename = filename
         self.extension = extension
-        self.attributes = 0
+        self.attributes = 0x20 # Archive attribute
         self.creation_time = 0
-        self.creation_date = 0
-        self.last_access_date = 0
+        self.creation_date = date
+        self.last_access_date = date
         self.last_write_time = 0
-        self.last_write_date = 0
-        self.first_logical_cluster = 0
-        self.file_size = 0
+        self.last_write_date = date
+        self.first_logical_cluster = first_logical_cluster
+        self.file_size = length
 
         self.data_fp = data_fp
 
@@ -251,6 +276,7 @@ class PyFat(object):
         curr = first_logical_cluster
         physical_clusters = []
         physical_clusters.append(33 + curr - 2)
+        # FIXME: quit when we run out of offset
         while True:
             offset = (3*curr)/2
             if curr % 2 == 0:
@@ -383,8 +409,36 @@ class PyFat(object):
 
         name,ext = os.path.splitext(filename)
 
+        # Update the FAT to hold the data for the file
+        num_clusters = ceiling_div(length, 512)
+        first_cluster = None
+        curr = 2
+        # FIXME: quit when we run out of offset
+        while True:
+            offset = (3*curr)/2
+            if curr % 2 == 0:
+                # even
+                low,high = struct.unpack("=BB", self.fat[offset:offset+2])
+                fat_entry = ((high & 0x0f) << 8) | (low)
+            else:
+                # odd
+                low,high = struct.unpack("=BB", self.fat[offset:offset+2])
+                fat_entry = (high << 4) | (low >> 4)
+
+            if fat_entry == 0x0:
+                num_clusters -= 1
+                if first_cluster is None:
+                    first_cluster = curr
+                if num_clusters == 0:
+                    break
+
+            curr += 1
+
+        if first_cluster is None or num_clusters != 0:
+            raise Exception("No space left on device")
+
         child = FATDirectoryEntry()
-        child.new_file(infp, parent, name, ext)
+        child.new_file(infp, length, parent, name, ext, first_cluster)
 
         parent.add_child(child)
 
