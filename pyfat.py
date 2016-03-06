@@ -150,13 +150,12 @@ class FAT12(object):
         curr = 2
         while curr < total_entries:
             offset = (3*curr)/2
+            low,high = struct.unpack("=BB", fatstring[offset:offset+2])
             if curr % 2 == 0:
                 # even
-                low,high = struct.unpack("=BB", fatstring[offset:offset+2])
                 fat_entry = ((high & 0x0f) << 8) | (low)
             else:
                 # odd
-                low,high = struct.unpack("=BB", fatstring[offset:offset+2])
                 fat_entry = (high << 4) | (low >> 4)
 
             self.fat[curr] = fat_entry
