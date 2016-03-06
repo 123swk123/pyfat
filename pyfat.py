@@ -74,7 +74,7 @@ class FATDirectoryEntry(object):
 
         self.initialized = True
 
-    def new_file(self, infp, length, parent, filename, extension, first_logical_cluster):
+    def new_file(self, data_fp, length, parent, filename, extension, first_logical_cluster):
         if self.initialized:
             raise Exception("This directory entry is already initialized")
 
@@ -90,7 +90,7 @@ class FATDirectoryEntry(object):
         month = local.tm_mon
         day = local.tm_mday
 
-        date = struct.pack("=H", (year << 9) | (month << 5) | (day & 0x1f))
+        date = (year << 9) | (month << 5) | (day & 0x1f)
 
         self.filename = filename
         self.extension = extension
@@ -104,6 +104,8 @@ class FATDirectoryEntry(object):
         self.file_size = length
 
         self.data_fp = data_fp
+
+        self.initialized = True
 
     def is_dir(self):
         if not self.initialized:
@@ -190,6 +192,39 @@ class FAT12(object):
             curr = self.fat[curr]
 
         return physical_clusters
+
+    def add_file(self, length):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        # Update the FAT to hold the data for the file
+        num_clusters = ceiling_div(length, 512)
+        first_cluster = None
+
+        last = None
+        curr = 2
+        while curr < len(self.fat) and num_clusters > 0:
+            if self.fat[curr] != 0x0:
+                continue
+
+            if first_cluster is None:
+                first_cluster = curr
+
+            if last is not None:
+                self.curr[last] = curr
+
+            last = curr
+
+            num_clusters -= 1
+            curr += 1
+
+        if first_cluster is None or num_clusters != 0:
+            raise Exception("No space left on device")
+
+        # Set the last cluster
+        self.fat[last] = 0xff
+
+        return first_cluster
 
     def record(self):
         if not self.initialized:
@@ -454,37 +489,11 @@ class PyFat(object):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
 
-        filename,parent = self._name_and_parent_from_index(path)
+        filename,parent = self._name_and_parent_from_path(path)
 
         name,ext = os.path.splitext(filename)
 
-        # Update the FAT to hold the data for the file
-        num_clusters = ceiling_div(length, 512)
-        first_cluster = None
-        curr = 2
-        # FIXME: quit when we run out of offset
-        while True:
-            offset = (3*curr)/2
-            if curr % 2 == 0:
-                # even
-                low,high = struct.unpack("=BB", self.fat[offset:offset+2])
-                fat_entry = ((high & 0x0f) << 8) | (low)
-            else:
-                # odd
-                low,high = struct.unpack("=BB", self.fat[offset:offset+2])
-                fat_entry = (high << 4) | (low >> 4)
-
-            if fat_entry == 0x0:
-                num_clusters -= 1
-                if first_cluster is None:
-                    first_cluster = curr
-                if num_clusters == 0:
-                    break
-
-            curr += 1
-
-        if first_cluster is None or num_clusters != 0:
-            raise Exception("No space left on device")
+        first_cluster = self.fat.add_file(length)
 
         child = FATDirectoryEntry()
         child.new_file(infp, length, parent, name, ext, first_cluster)
