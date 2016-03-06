@@ -141,7 +141,7 @@ class FAT12(object):
         if self.initialized:
             raise Exception("This object is already initialized")
 
-        total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) * bytes per entry (1.5)
+        total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) / bytes per entry (1.5)
 
         self.fat = [0x0]*int(total_entries)
         self.fat[0] = 0xf0
@@ -153,7 +153,7 @@ class FAT12(object):
             low,high = struct.unpack("=BB", fatstring[offset:offset+2])
             if curr % 2 == 0:
                 # even
-                fat_entry = ((high & 0x0f) << 8) | (low)
+                fat_entry = ((high & 0x0f) << 8) | low
             else:
                 # odd
                 fat_entry = (high << 4) | (low >> 4)
@@ -185,27 +185,11 @@ class FAT12(object):
 
         ret = '\xf0\xff'
 
-        for index,fat_entry in enumerate(self.fat[2:]):
-            offset = (3*index)/2
-            if curr % 2 == 0:
-                # even
-                low = 0
-                high = 0
-                ret += struct.pack("=BB", low, high)
-
-                #low,high = struct.unpack("=BB", fatstring[offset:offset+2])
-                #fat_entry = ((high & 0x0f) << 8) | (low)
-            else:
-                # odd
-                low = 0
-                high = 0
-                ret += struct.pack("=BB", low, high)
-
-                #low,high = struct.unpack("=BB", fatstring[offset:offset+2])
-                #fat_entry = (high << 4) | (low >> 4)
-
-            self.fat[curr] = fat_entry
-            curr += 1
+        for byte in range(3, 512*9, 3):
+            curr = byte * 2/3
+            ret += struct.pack("=B", self.fat[curr] & 0xff)
+            ret += struct.pack("=B", ((self.fat[curr] >> 8) | (self.fat[curr + 1] << 4)) & 0xff)
+            ret += struct.pack("=B", self.fat[curr + 1] & 0xff)
 
         return ret
 
@@ -555,7 +539,7 @@ class PyFat(object):
                     data_fp = child.get_data_fp()
 
                     # An actual file we have to write out
-                    for cluster in self._get_cluster_list_from_fat(child.first_logical_cluster):
+                    for cluster in self.fat.get_cluster_list(child.first_logical_cluster):
                         data_fp.seek(cluster * 512)
                         outfp.seek(cluster * 512)
                         outfp.write(data_fp.read(512))
