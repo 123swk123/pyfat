@@ -3,6 +3,10 @@ import collections
 import os
 import time
 
+# FIXME: add a custom exception type
+# FIXME: document all methods
+# FIXME: add tests
+
 def hexdump(st):
     '''
     A utility function to print a string in hex.
@@ -95,6 +99,7 @@ class FATDirectoryEntry(object):
         self.filename = filename
         self.extension = extension
         self.attributes = 0x20 # Archive attribute
+        # FIXME: create times
         self.creation_time = 0
         self.creation_date = date
         self.last_access_date = date
@@ -499,6 +504,20 @@ class PyFat(object):
         child.new_file(infp, length, parent, name, ext, first_cluster)
 
         parent.add_child(child)
+
+        # FIXME: when adding a new file, we may have to expand the directory
+
+    def add_dir(self, path):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        # FIXME: implement this
+
+    # FIXME: implement the ability to manipulate attributes
+
+    # FIXME: add the ability to remove directories
+
+    # FIXME: add the ability to remove files
 
     def write(self, outfp):
         if not self.initialized:
