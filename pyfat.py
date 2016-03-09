@@ -565,6 +565,8 @@ class PyFat(object):
         filename,parent = self._name_and_parent_from_path(path)
 
         name,ext = os.path.splitext(filename)
+        if ext[0] == '.':
+            ext = ext[1:]
 
         first_cluster = self.fat.add_file(length)
 
@@ -674,12 +676,14 @@ class PyFat(object):
                     dirs.append(child)
                 else:
                     data_fp = child.get_data_fp()
+                    data_cluster = 0
 
                     # An actual file we have to write out
                     for cluster in self.fat.get_cluster_list(child.first_logical_cluster):
-                        data_fp.seek(cluster * 512)
+                        data_fp.seek(data_cluster * 512)
                         outfp.seek(cluster * 512)
                         outfp.write(data_fp.read(512))
+                        data_cluster += 1
 
         # Finally, truncate the file out to its final size
         outfp.truncate(self.size_in_kb * 1024)
