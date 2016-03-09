@@ -60,155 +60,72 @@ class FATDirectoryEntry(object):
 
         self.initialized = True
 
+    def _new(self, filename, extension, is_dir, first_logical_cluster, file_size, parent):
+        if len(filename) > 8:
+            raise Exception("Filename is too long (must be 8 or shorter)")
+
+        if len(extension) > 3:
+            raise Exception("Extension is too long (must be 3 or shorter)")
+
+        tm = time.time()
+        local = time.localtime(tm)
+        year = local.tm_year - 1980
+        month = local.tm_mon
+        day = local.tm_mday
+
+        date = (year << 9) | (month << 5) | (day & 0x1f)
+
+        # FIXME: figure out the time
+        self.filename = filename
+        self.extension = extension
+        if is_dir:
+            self.attributes = 0x10
+        else:
+            self.attributes = 0x20
+        self.creation_time = 0
+        self.creation_date = date
+        self.last_access_date = date
+        self.last_write_time = 0
+        self.last_write_date = date
+        self.first_logical_cluster = first_logical_cluster
+        self.file_size = file_size
+
+        self.parent = parent
+        self.children = []
+
+        self.initialized = True
+
     def new_root(self):
         if self.initialized:
             raise Exception("This directory entry is already initialized")
 
-        self.filename = '        '
-        self.extension = '   '
-        self.attributes = 0x10
-        self.creation_time = 0
-        self.creation_date = 0
-        self.last_access_date = 0
-        self.last_write_time = 0
-        self.last_write_date = 0
-        self.first_logical_cluster = 0
-        self.file_size = 0
-
-        self.parent = None
-        self.children = []
-
-        self.initialized = True
+        self._new('', '', True, 0, 0, None)
 
     def new_file(self, data_fp, length, parent, filename, extension, first_logical_cluster):
         if self.initialized:
             raise Exception("This directory entry is already initialized")
 
-        if len(filename) > 8:
-            raise Exception("Filename is too long (must be 8 or shorter)")
-
-        if len(extension) > 3:
-            raise Exception("Extension is too long (must be 3 or shorter)")
-
-        tm = time.time()
-        local = time.localtime(tm)
-        year = local.tm_year - 1980
-        month = local.tm_mon
-        day = local.tm_mday
-
-        date = (year << 9) | (month << 5) | (day & 0x1f)
-
-        self.filename = filename
-        self.extension = extension
-        self.attributes = 0x20 # Archive attribute
-        # FIXME: create times
-        self.creation_time = 0
-        self.creation_date = date
-        self.last_access_date = date
-        self.last_write_time = 0
-        self.last_write_date = date
-        self.first_logical_cluster = first_logical_cluster
-        self.file_size = length
-
-        self.parent = parent
-        self.children = []
-
         self.data_fp = data_fp
+        self._new(filename, extension, False, first_logical_cluster, length, parent)
 
-        self.initialized = True
 
     def new_dir(self, parent, filename, extension, first_logical_cluster):
         if self.initialized:
             raise Exception("This directory entry is already initialized")
 
-        if len(filename) > 8:
-            raise Exception("Filename is too long (must be 8 or shorter)")
-
-        if len(extension) > 3:
-            raise Exception("Extension is too long (must be 3 or shorter)")
-
-        tm = time.time()
-        local = time.localtime(tm)
-        year = local.tm_year - 1980
-        month = local.tm_mon
-        day = local.tm_mday
-
-        date = (year << 9) | (month << 5) | (day & 0x1f)
-
-        self.filename = filename
-        self.extension = extension
-        self.attributes = 0x10 # Directory attribute
-        # FIXME: create times
-        self.creation_time = 0
-        self.creation_date = date
-        self.last_access_date = date
-        self.last_write_time = 0
-        self.last_write_date = date
-        self.first_logical_cluster = first_logical_cluster
-        self.file_size = 0
-
-        self.parent = parent
-        self.children = []
-
-        self.initialized = True
+        self._new(filename, extension, True, first_logical_cluster, 0, parent)
 
     def new_dot(self, parent, first_logical_cluster):
         if self.initialized:
             raise Exception("This directory entry is already initialized")
 
-        tm = time.time()
-        local = time.localtime(tm)
-        year = local.tm_year - 1980
-        month = local.tm_mon
-        day = local.tm_mday
-
-        date = (year << 9) | (month << 5) | (day & 0x1f)
-
-        self.filename = '.'
-        self.extension = ''
-        self.attributes = 0x10 # Directory attribute
-        # FIXME: create times
-        self.creation_time = 0
-        self.creation_date = date
-        self.last_access_date = date
-        self.last_write_time = 0
-        self.last_write_date = date
-        self.first_logical_cluster = first_logical_cluster
-        self.file_size = 0
-
-        self.parent = parent
-        self.children = []
-
-        self.initialized = True
+        self._new('.', '', True, first_logical_cluster, 0, parent)
 
     def new_dotdot(self, parent):
         if self.initialized:
             raise Exception("This directory entry is already initialized")
 
-        tm = time.time()
-        local = time.localtime(tm)
-        year = local.tm_year - 1980
-        month = local.tm_mon
-        day = local.tm_mday
-
-        date = (year << 9) | (month << 5) | (day & 0x1f)
-
-        self.filename = '..'
-        self.extension = ''
-        self.attributes = 0x10 # Directory attribute
-        # FIXME: create times
-        self.creation_time = 0
-        self.creation_date = date
-        self.last_access_date = date
-        self.last_write_time = 0
-        self.last_write_date = date
-        self.first_logical_cluster = 0
-        self.file_size = 0
-
-        self.parent = parent
-        self.children = []
-
-        self.initialized = True
+        self._new('..', '', True, 0, 0, parent)
 
     def is_dir(self):
         if not self.initialized:
