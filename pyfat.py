@@ -6,6 +6,8 @@ import time
 # FIXME: add a custom exception type
 # FIXME: document all methods
 # FIXME: add tests
+# FIXME: add support for FAT16
+# FIXME: add support for FAT32
 
 def hexdump(st):
     '''
