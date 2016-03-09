@@ -155,6 +155,24 @@ class FATDirectoryEntry(object):
 
         self.children.append(child)
 
+    def remove_child(self, name, ext):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
+
+        expandname = "{:<8}".format(name)
+        expandext = "{:<3}".format(ext)
+
+        foundindex = None
+        for index,child in enumerate(self.children):
+            if child.filename == expandname and child.extension == expandext:
+                foundindex = index
+                break
+
+        if foundindex is None:
+            raise Exception("Could not find child")
+
+        del self.children[foundindex]
+
     def directory_record(self):
         if not self.initialized:
             raise Exception("This directory entry is not yet initialized")
@@ -555,7 +573,7 @@ class PyFat(object):
 
         parent.add_child(child)
 
-        # FIXME: when adding a new file, we may have to expand the directory
+        # FIXME: when adding a new file, we may have to expand the parent size and the size in the FAT
 
     def add_dir(self, path):
         if not self.initialized:
@@ -584,7 +602,18 @@ class PyFat(object):
 
     # FIXME: add the ability to remove directories
 
-    # FIXME: add the ability to remove files
+    def rm_file(self, path):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        filename,parent = self._name_and_parent_from_path(path)
+
+        name,ext = os.path.splitext(filename)
+
+        parent.remove_child(name, ext)
+
+        # FIXME: we need to remove this entries FAT entry
+        # FIXME: when removing a child, we may have to shrink the parent size in the FAT
 
     def write(self, outfp):
         if not self.initialized:
