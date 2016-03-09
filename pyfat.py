@@ -39,7 +39,6 @@ def ceiling_div(numer, denom):
 class FATDirectoryEntry(object):
     def __init__(self):
         self.initialized = False
-        self.physical_clusters = []
 
     def parse(self, instr, parent, data_fp):
         if self.initialized:
@@ -75,7 +74,6 @@ class FATDirectoryEntry(object):
 
         date = (year << 9) | (month << 5) | (day & 0x1f)
 
-        # FIXME: figure out the time
         self.filename = filename
         self.extension = extension
         if is_dir:
