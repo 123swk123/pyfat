@@ -66,7 +66,7 @@ class FATDirectoryEntry(object):
 
         self.filename = '        '
         self.extension = '   '
-        self.attributes = 0
+        self.attributes = 0x10
         self.creation_time = 0
         self.creation_date = 0
         self.last_access_date = 0
@@ -110,7 +110,103 @@ class FATDirectoryEntry(object):
         self.first_logical_cluster = first_logical_cluster
         self.file_size = length
 
+        self.parent = parent
+        self.children = []
+
         self.data_fp = data_fp
+
+        self.initialized = True
+
+    def new_dir(self, parent, filename, extension, first_logical_cluster):
+        if self.initialized:
+            raise Exception("This directory entry is already initialized")
+
+        if len(filename) > 8:
+            raise Exception("Filename is too long (must be 8 or shorter)")
+
+        if len(extension) > 3:
+            raise Exception("Extension is too long (must be 3 or shorter)")
+
+        tm = time.time()
+        local = time.localtime(tm)
+        year = local.tm_year - 1980
+        month = local.tm_mon
+        day = local.tm_mday
+
+        date = (year << 9) | (month << 5) | (day & 0x1f)
+
+        self.filename = filename
+        self.extension = extension
+        self.attributes = 0x10 # Directory attribute
+        # FIXME: create times
+        self.creation_time = 0
+        self.creation_date = date
+        self.last_access_date = date
+        self.last_write_time = 0
+        self.last_write_date = date
+        self.first_logical_cluster = first_logical_cluster
+        self.file_size = 0
+
+        self.parent = parent
+        self.children = []
+
+        self.initialized = True
+
+    def new_dot(self, parent, first_logical_cluster):
+        if self.initialized:
+            raise Exception("This directory entry is already initialized")
+
+        tm = time.time()
+        local = time.localtime(tm)
+        year = local.tm_year - 1980
+        month = local.tm_mon
+        day = local.tm_mday
+
+        date = (year << 9) | (month << 5) | (day & 0x1f)
+
+        self.filename = '.'
+        self.extension = ''
+        self.attributes = 0x10 # Directory attribute
+        # FIXME: create times
+        self.creation_time = 0
+        self.creation_date = date
+        self.last_access_date = date
+        self.last_write_time = 0
+        self.last_write_date = date
+        self.first_logical_cluster = first_logical_cluster
+        self.file_size = 0
+
+        self.parent = parent
+        self.children = []
+
+        self.initialized = True
+
+    def new_dotdot(self, parent):
+        if self.initialized:
+            raise Exception("This directory entry is already initialized")
+
+        tm = time.time()
+        local = time.localtime(tm)
+        year = local.tm_year - 1980
+        month = local.tm_mon
+        day = local.tm_mday
+
+        date = (year << 9) | (month << 5) | (day & 0x1f)
+
+        self.filename = '..'
+        self.extension = ''
+        self.attributes = 0x10 # Directory attribute
+        # FIXME: create times
+        self.creation_time = 0
+        self.creation_date = date
+        self.last_access_date = date
+        self.last_write_time = 0
+        self.last_write_date = date
+        self.first_logical_cluster = 0
+        self.file_size = 0
+
+        self.parent = parent
+        self.children = []
 
         self.initialized = True
 
@@ -120,9 +216,27 @@ class FATDirectoryEntry(object):
 
         return self.attributes & 0x10
 
+    def is_dot(self):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
+
+        return self.filename == '.'
+
+    def is_dotdot(self):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
+
+        return self.filename == '..'
+
     def add_child(self, child):
         if not self.initialized:
             raise Exception("This directory entry is not yet initialized")
+
+        if not self.is_dir():
+            raise Exception("Can only add children to directories")
+
+        if self.is_dot() or self.is_dotdot():
+            raise Exception("Cannot add children to dot or dotdot")
 
         self.children.append(child)
 
@@ -130,7 +244,8 @@ class FATDirectoryEntry(object):
         if not self.initialized:
             raise Exception("This directory entry is not yet initialized")
 
-        return struct.pack("=8s3sBHHHHHHHHL", self.filename, self.extension,
+        return struct.pack("=8s3sBHHHHHHHHL", "{:<8}".format(self.filename),
+                           "{:<3}".format(self.extension),
                            self.attributes, 0, self.creation_time,
                            self.creation_date, self.last_access_date, 0,
                            self.last_write_time, self.last_write_date,
@@ -211,18 +326,17 @@ class FAT12(object):
         last = None
         curr = 2
         while curr < len(self.fat) and num_clusters > 0:
-            if self.fat[curr] != 0x0:
-                continue
+            if self.fat[curr] == 0x0:
+                if first_cluster is None:
+                    first_cluster = curr
 
-            if first_cluster is None:
-                first_cluster = curr
+                if last is not None:
+                    self.fat[last] = curr
 
-            if last is not None:
-                self.curr[last] = curr
+                last = curr
 
-            last = curr
+                num_clusters -= 1
 
-            num_clusters -= 1
             curr += 1
 
         if first_cluster is None or num_clusters != 0:
@@ -230,6 +344,25 @@ class FAT12(object):
 
         # Set the last cluster
         self.fat[last] = 0xfff
+
+        return first_cluster
+
+    def add_dir(self):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        first_cluster = None
+
+        curr = 2
+        while curr < len(self.fat) and first_cluster is None:
+            if self.fat[curr] == 0x0:
+                first_cluster = curr
+                self.fat[curr] = 0xfff
+
+            curr += 1
+
+        if first_cluster is None:
+            raise Exception("No space left on device")
 
         return first_cluster
 
@@ -352,7 +485,7 @@ class PyFat(object):
 
         # Now walk the root directory entry
         self.root = FATDirectoryEntry()
-        self.root.parse('           \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None, infp)
+        self.root.parse('           \x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None, infp)
         root_cluster_list = []
         for i in range(19, 19+14):
             root_cluster_list.append(i)
@@ -513,7 +646,24 @@ class PyFat(object):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
 
-        # FIXME: implement this
+        filename,parent = self._name_and_parent_from_path(path)
+
+        name,ext = os.path.splitext(filename)
+
+        first_cluster = self.fat.add_dir()
+
+        child = FATDirectoryEntry()
+        child.new_dir(parent, name, ext, first_cluster)
+
+        parent.add_child(child)
+
+        dot = FATDirectoryEntry()
+        dot.new_dot(parent, first_cluster)
+        child.add_child(dot)
+
+        dotdot = FATDirectoryEntry()
+        dotdot.new_dotdot(parent)
+        child.add_child(dotdot)
 
     # FIXME: implement the ability to manipulate attributes
 
@@ -567,8 +717,8 @@ class PyFat(object):
                 outfp.write(child.directory_record())
                 cluster_offset += 32
 
-                if child.is_dir():
-                    dirs.append(child)
+                if child.is_dir() and not (child.is_dot() or child.is_dotdot()):
+                    dirs.append((child, self.fat.get_cluster_list(child.first_logical_cluster)))
 
         # Now write out the files
         dirs = collections.deque([self.root])
