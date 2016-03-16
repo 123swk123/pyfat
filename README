@@ -1,0 +1,3 @@
+A pure python library for creating, reading, modifying, and writing FAT
+filesystems.  Currently only FAT12 is supported, but FAT16 and FAT32 support
+is planned to be implemented.
