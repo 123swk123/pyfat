@@ -46,3 +46,36 @@ def test_hybrid_rmfile(tmpdir):
         do_a_test(fat, check_nofiles)
 
         fat.close()
+
+def test_hybrid_onefile(tmpdir):
+    indir = tmpdir.mkdir("onefile")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+
+    fat = pyfat.PyFat()
+
+    with open(str(outfile), 'rb') as fp:
+        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+
+        mystr = "foo\n"
+        fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+
+        do_a_test(fat, check_onefile)
+
+        fat.close()
+
+def test_hybrid_onedir(tmpdir):
+    indir = tmpdir.mkdir("onedir")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+
+    fat = pyfat.PyFat()
+
+    with open(str(outfile), 'rb') as fp:
+        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+
+        fat.add_dir("/DIR1")
+
+        do_a_test(fat, check_onedir)
+
+        fat.close()
