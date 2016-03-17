@@ -113,7 +113,7 @@ class FATDirectoryEntry(object):
         if self.initialized:
             raise Exception("This directory entry is already initialized")
 
-        self._new('', '', True, 0, 0, None)
+        self._new('        ', '   ', True, 0, 0, None)
 
     def new_file(self, data_fp, length, parent, filename, extension, first_logical_cluster):
         if self.initialized:

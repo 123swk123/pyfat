@@ -15,3 +15,5 @@ def check_nofiles(fat, filesize):
     assert(fat.drive_num == 0)
     assert(fat.boot_sig == 41)
     assert(fat.size_in_kb == 1440)
+    assert(fat.root.filename == '        ')
+    assert(fat.root.extension == '   ')
