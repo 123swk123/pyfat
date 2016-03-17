@@ -51,3 +51,11 @@ def test_parse_onefile(tmpdir):
     subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
 
     do_a_test(tmpdir, outfile, check_onefile)
+
+def test_parse_onedir(tmpdir):
+    indir = tmpdir.mkdir("onefile")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    subprocess.call(["mmd", "-i", str(outfile), "DIR1"])
+
+    do_a_test(tmpdir, outfile, check_onedir)

@@ -156,13 +156,13 @@ class FATDirectoryEntry(object):
         if not self.initialized:
             raise Exception("This directory entry is not yet initialized")
 
-        return self.filename == '.'
+        return self.filename == '.       '
 
     def is_dotdot(self):
         if not self.initialized:
             raise Exception("This directory entry is not yet initialized")
 
-        return self.filename == '..'
+        return self.filename == '..      '
 
     def add_child(self, child):
         if not self.initialized:
@@ -465,7 +465,7 @@ class PyFat(object):
                 ent = FATDirectoryEntry()
                 ent.parse(dir_entry, currdir, infp)
                 currdir.add_child(ent)
-                if ent.is_dir():
+                if ent.is_dir() and not (ent.is_dot() or ent.is_dotdot()):
                     dirs.append((ent, self.fat.get_cluster_list(ent.first_logical_cluster)))
 
         self.initialized = True
@@ -512,11 +512,28 @@ class PyFat(object):
 
         child,index = self._find_record(path)
 
-        data_fp = child.get_data_fp()
+        new_cluster_list = self.fat.get_cluster_list(child.first_logical_cluster)
+        if child.original_data_location == child.DATA_ON_ORIGINAL_FAT:
+            # If this is a file that was on the original filesystem,
+            # then we haven't modified the cluster list and the
+            # original is the same as the new.
+            orig_cluster_list = new_cluster_list
+        elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
+            orig_cluster_list = range(0, child.file_size, 512)
 
-        for cluster in self.fat.get_cluster_list(child.first_logical_cluster):
-            data_fp.seek(cluster * 512)
-            outfp.write(data_fp.read(512))
+        left = child.file_size
+        index = 0
+        while index < len(orig_cluster_list) and left > 0:
+            thisread = 512
+            if left < thisread:
+                thisread = left
+
+            child.data_fp.seek(orig_cluster_list[index] * 512)
+            outfp.seek(index * 512)
+            outfp.write(child.data_fp.read(thisread))
+
+            left -= thisread
+            index += 1
 
     def new(self, size_in_kb=1440):
         if self.initialized:
@@ -710,9 +727,10 @@ class PyFat(object):
 
                         child.data_fp.seek(orig_cluster_list[index] * 512)
                         outfp.seek(new_cluster_list[index] * 512)
-                        outfp.write(child.data_fp.read(512))
+                        outfp.write(child.data_fp.read(thisread))
 
                         left -= thisread
+                        index += 1
 
         # Finally, truncate the file out to its final size
         outfp.write('\x00'*(self.size_in_kb * 1024 - outfp.tell()))

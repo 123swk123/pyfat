@@ -1,3 +1,5 @@
+import StringIO
+
 def internal_check_boot_sector(fat):
     assert(fat.bytes_per_sector == 512)
     assert(fat.sectors_per_cluster == 1)
@@ -49,6 +51,31 @@ def check_onefile(fat, filesize):
     assert(len(fat.root.children) == 1)
     internal_check_directory_entry(fat.root.children[0], "FOO     ", "   ", 2, 4, 0x20)
     assert(len(fat.root.children[0].children) == 0)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xf0)
+    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[2] == 0xfff)
+
+    fout = StringIO.StringIO()
+    fat.get_and_write_file("/FOO", fout)
+    assert(fout.getvalue() == "foo\n")
+
+def check_onedir(fat, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 1)
+    internal_check_directory_entry(fat.root.children[0], "DIR1    ", "   ", 2, 0, 0x10)
+    assert(len(fat.root.children[0].children) == 2)
+
+    dir1 = fat.root.children[0]
+    assert(len(dir1.children) == 2)
+    internal_check_directory_entry(dir1.children[0], ".       ", "   ", 2, 0, 0x10)
+    internal_check_directory_entry(dir1.children[1], "..      ", "   ", 0, 0, 0x10)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
     assert(fat.fat.fat[0] == 0xf0)
