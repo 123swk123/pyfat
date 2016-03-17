@@ -90,8 +90,8 @@ class FATDirectoryEntry(object):
 
         date = (year << 9) | (month << 5) | (day & 0x1f)
 
-        self.filename = filename
-        self.extension = extension
+        self.filename = "{:<8}".format(filename)
+        self.extension = "{:<3}".format(extension)
         if is_dir:
             self.attributes = 0x10
         else:
@@ -581,7 +581,7 @@ class PyFat(object):
         filename,parent = self._name_and_parent_from_path(path)
 
         name,ext = os.path.splitext(filename)
-        if ext[0] == '.':
+        if len(ext) > 0 and ext[0] == '.':
             ext = ext[1:]
 
         first_cluster = self.fat.add_file(length)
@@ -628,7 +628,7 @@ class PyFat(object):
 
         name,ext = os.path.splitext(filename)
 
-        parent.remove_child(name, ext)
+        parent.remove_child(name, ext[1:])
 
         # FIXME: we need to remove this entries FAT entry
         # FIXME: when removing a child, we may have to shrink the parent size in the FAT

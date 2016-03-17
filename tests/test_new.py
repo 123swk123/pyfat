@@ -38,3 +38,25 @@ def test_new_nofiles():
     fat.new()
 
     do_a_test(fat, check_nofiles)
+
+def test_new_rmfile():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    mystr = "foo\n"
+    fat.add_fp("/FOO.TXT", StringIO.StringIO(mystr), len(mystr))
+
+    fat.rm_file("/FOO.TXT")
+
+    do_a_test(fat, check_nofiles)
+
+def test_new_rmfile_no_ext():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    mystr = "foo\n"
+    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+
+    fat.rm_file("/FOO")
+
+    do_a_test(fat, check_nofiles)
