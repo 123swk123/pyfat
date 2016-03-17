@@ -66,3 +66,11 @@ def test_new_onefile():
     fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
 
     do_a_test(fat, check_onefile)
+
+def test_new_onedir():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    fat.add_dir("/DIR1")
+
+    do_a_test(fat, check_onedir)
