@@ -57,3 +57,12 @@ def test_new_rmfile_no_ext():
     fat.rm_file("/FOO")
 
     do_a_test(fat, check_nofiles)
+
+def test_new_onefile():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    mystr = "foo\n"
+    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+
+    do_a_test(fat, check_onefile)
