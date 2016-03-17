@@ -53,6 +53,9 @@ def ceiling_div(numer, denom):
     return -(-numer // denom)
 
 class FATDirectoryEntry(object):
+    DATA_ON_ORIGINAL_FAT = 1
+    DATA_IN_EXTERNAL_FP = 2
+
     def __init__(self):
         self.initialized = False
 
@@ -72,6 +75,7 @@ class FATDirectoryEntry(object):
         self.children = []
 
         self.data_fp = data_fp
+        self.original_data_location = self.DATA_ON_ORIGINAL_FAT
 
         self.initialized = True
 
@@ -120,6 +124,7 @@ class FATDirectoryEntry(object):
             raise Exception("This directory entry is already initialized")
 
         self.data_fp = data_fp
+        self.original_data_location = self.DATA_IN_EXTERNAL_FP
         self._new(filename, extension, False, first_logical_cluster, length, parent)
 
 
@@ -200,12 +205,6 @@ class FATDirectoryEntry(object):
                            self.last_write_time, self.last_write_date,
                            self.first_logical_cluster, self.file_size)
 
-    def get_data_fp(self):
-        if not self.initialized:
-            raise Exception("This directory entry is not yet initialized")
-
-        return self.data_fp
-
 class FAT12(object):
     def __init__(self):
         self.initialized = False
@@ -249,6 +248,8 @@ class FAT12(object):
         self.initialized = True
 
     def get_cluster_list(self, first_logical_cluster):
+        # FIXME: we should make this a generator
+
         if not self.initialized:
             raise Exception("This object is not yet initialized")
 
@@ -319,7 +320,7 @@ class FAT12(object):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
 
-        ret = '\xf0\xff'
+        ret = '\xf0\xff\xff'
 
         for byte in range(3, 512*9, 3):
             curr = byte * 2/3
@@ -691,15 +692,27 @@ class PyFat(object):
                 if child.is_dir():
                     dirs.append(child)
                 else:
-                    data_fp = child.get_data_fp()
-                    data_cluster = 0
+                    new_cluster_list = self.fat.get_cluster_list(child.first_logical_cluster)
+                    if child.original_data_location == child.DATA_ON_ORIGINAL_FAT:
+                        # If this is a file that was on the original filesystem,
+                        # then we haven't modified the cluster list and the
+                        # original is the same as the new.
+                        orig_cluster_list = new_cluster_list
+                    elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
+                        orig_cluster_list = range(0, child.file_size, 512)
 
-                    # An actual file we have to write out
-                    for cluster in self.fat.get_cluster_list(child.first_logical_cluster):
-                        data_fp.seek(data_cluster * 512)
-                        outfp.seek(cluster * 512)
-                        outfp.write(data_fp.read(512))
-                        data_cluster += 1
+                    left = child.file_size
+                    index = 0
+                    while index < len(orig_cluster_list) and left > 0:
+                        thisread = 512
+                        if left < thisread:
+                            thisread = left
+
+                        child.data_fp.seek(orig_cluster_list[index] * 512)
+                        outfp.seek(new_cluster_list[index] * 512)
+                        outfp.write(child.data_fp.read(512))
+
+                        left -= thisread
 
         # Finally, truncate the file out to its final size
         outfp.write('\x00'*(self.size_in_kb * 1024 - outfp.tell()))

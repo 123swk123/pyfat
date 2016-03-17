@@ -1,5 +1,4 @@
-def check_nofiles(fat, filesize):
-    assert(filesize == 1474560)
+def internal_check_boot_sector(fat):
     assert(fat.bytes_per_sector == 512)
     assert(fat.sectors_per_cluster == 1)
     assert(fat.reserved_sectors == 1)
@@ -15,13 +14,43 @@ def check_nofiles(fat, filesize):
     assert(fat.drive_num == 0)
     assert(fat.boot_sig == 41)
     assert(fat.size_in_kb == 1440)
-    assert(fat.root.filename == '        ')
-    assert(fat.root.extension == '   ')
-    assert(fat.root.first_logical_cluster == 0)
-    assert(fat.root.file_size == 0)
-    assert(fat.root.attributes == 0x10)
+
+def internal_check_directory_entry(entry, filename, extension, first_logical_cluster, file_size, attributes):
+    assert(entry.filename == filename)
+    assert(entry.extension == extension)
+    assert(entry.first_logical_cluster == first_logical_cluster)
+    assert(entry.file_size == file_size)
+    assert(entry.attributes == attributes)
+
+def internal_check_root(root):
+    internal_check_directory_entry(root, '        ', '   ', 0, 0, 0x10)
+
+def check_nofiles(fat, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
     assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 0)
     assert(fat.root.children == [])
+
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
     assert(fat.fat.fat[0] == 0xf0)
     assert(fat.fat.fat[1] == 0xff)
+
+def check_onefile(fat, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 1)
+    internal_check_directory_entry(fat.root.children[0], "FOO     ", "   ", 2, 4, 0x20)
+    assert(len(fat.root.children[0].children) == 0)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xf0)
+    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[2] == 0xfff)

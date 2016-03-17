@@ -20,9 +20,6 @@ def do_a_test(fat, check_func):
     out = StringIO.StringIO()
     fat.write(out)
 
-    with open('/home/clalancette/upstream/pyfat/debug.flop', 'w') as fp:
-        fp.write(out.getvalue())
-
     check_func(fat, len(out.getvalue()))
 
     # Now make sure we can re-open the written ISO.

@@ -18,7 +18,7 @@ from common import *
 def do_a_test(tmpdir, outfile, check_func):
     testout = tmpdir.join("writetest.img")
 
-    # Now open up the ISO with pyiso and check some things out.
+    # Now open up the floppy with pyfat and check some things out.
     fat = pyfat.PyFat()
     with open(str(outfile), 'rb') as fp:
         fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
@@ -41,3 +41,13 @@ def test_parse_nofiles(tmpdir):
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
 
     do_a_test(tmpdir, outfile, check_nofiles)
+
+def test_parse_onefile(tmpdir):
+    indir = tmpdir.mkdir("onefile")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+
+    do_a_test(tmpdir, outfile, check_onefile)
