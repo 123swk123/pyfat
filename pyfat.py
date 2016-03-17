@@ -702,7 +702,7 @@ class PyFat(object):
                         data_cluster += 1
 
         # Finally, truncate the file out to its final size
-        outfp.truncate(self.size_in_kb * 1024)
+        outfp.write('\x00'*(self.size_in_kb * 1024 - outfp.tell()))
 
     def close(self):
         if not self.initialized:
