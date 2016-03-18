@@ -53,12 +53,14 @@ def test_hybrid_onefile(tmpdir):
     outfile = str(indir) + ".img"
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
 
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
     fat = pyfat.PyFat()
 
     fat.open(outfile)
 
-    mystr = "foo\n"
-    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    fat.add_file("/FOO", str(foo))
 
     do_a_test(fat, tmpdir, check_onefile)
 

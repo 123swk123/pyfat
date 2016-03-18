@@ -42,8 +42,10 @@ def test_new_rmfile(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
-    mystr = "foo\n"
-    fat.add_fp("/FOO.TXT", StringIO.StringIO(mystr), len(mystr))
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat.add_file("/FOO.TXT", str(foo))
 
     fat.rm_file("/FOO.TXT")
 
@@ -53,8 +55,10 @@ def test_new_rmfile_no_ext(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
-    mystr = "foo\n"
-    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat.add_file("/FOO", str(foo))
 
     fat.rm_file("/FOO")
 
@@ -64,8 +68,10 @@ def test_new_onefile(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
-    mystr = "foo\n"
-    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat.add_file("/FOO", str(foo))
 
     do_a_test(fat, tmpdir, check_onefile)
 
@@ -90,8 +96,10 @@ def test_new_onefile_system(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
-    mystr = "foo\n"
-    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat.add_file("/FOO", str(foo))
     fat.set_system("/FOO")
 
     do_a_test(fat, tmpdir, check_onefile_system)
@@ -100,8 +108,10 @@ def test_new_onefile_archive(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
-    mystr = "foo\n"
-    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat.add_file("/FOO", str(foo))
     fat.set_archive("/FOO")
 
     do_a_test(fat, tmpdir, check_onefile_archive)
@@ -110,8 +120,10 @@ def test_new_onefile_hidden(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
-    mystr = "foo\n"
-    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat.add_file("/FOO", str(foo))
     fat.set_hidden("/FOO")
 
     do_a_test(fat, tmpdir, check_onefile_hidden)
@@ -120,8 +132,10 @@ def test_new_onefile_read_only(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
-    mystr = "foo\n"
-    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat.add_file("/FOO", str(foo))
     fat.set_read_only("/FOO")
 
     do_a_test(fat, tmpdir, check_onefile_read_only)
@@ -130,8 +144,10 @@ def test_new_onefile_all_attr(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
-    mystr = "foo\n"
-    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat.add_file("/FOO", str(foo))
     fat.set_read_only("/FOO")
     fat.set_hidden("/FOO")
     fat.set_system("/FOO")
@@ -143,8 +159,10 @@ def test_new_onefile_no_attr(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
-    mystr = "foo\n"
-    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat.add_file("/FOO", str(foo))
     fat.clear_read_only("/FOO")
     fat.clear_hidden("/FOO")
     fat.clear_system("/FOO")

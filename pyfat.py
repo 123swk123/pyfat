@@ -947,21 +947,23 @@ class PyFat(object):
 
         return (name, parent)
 
-    def add_fp(self, path, infp, length):
+    def add_file(self, fat_path, local_path):
         '''
         A method to add a new file to the filesystem.
 
         Parameters:
-         path - The path on the FAT filesystem to add the file.
-         infp - The file-like object containin the data for the file.
-         length - The length of the file.
+         fat_path - The path on the FAT filesystem to add the file.
+         local_path - The local path that the file data should come from.
         Returns:
          Nothing.
         '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        filename, parent = self._name_and_parent_from_path(path)
+        infp = open(local_path, 'rb')
+        length = os.fstat(infp.fileno()).st_size
+
+        filename, parent = self._name_and_parent_from_path(fat_path)
 
         name, ext = os.path.splitext(filename)
         if len(ext) > 0 and ext[0] == '.':
