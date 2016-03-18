@@ -14,6 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+'''
+Main PyFat class and support classes and utilities.
+'''
+
 import struct
 import collections
 import os
@@ -161,6 +165,19 @@ class FATDirectoryEntry(object):
         self._new('        ', '   ', True, 0, 0, None)
 
     def new_file(self, data_fp, length, parent, filename, extension, first_logical_cluster):
+        '''
+        A method to create a new file.
+
+        Parameters:
+         data_fp - The file-like object that contains the data for this file.
+         length - The length of this directory entry.
+         parent - The parent of this directory entry.
+         filename - The filename to give to this directory entry; it must be 8 characters or less.
+         extension - The extension to give to this directory entry; it must be 3 characters or less.
+         first_logical_cluster - The first logical cluster in the FAT for this directory entry.
+        Returns:
+         Nothing.
+        '''
         if self.initialized:
             raise PyFatException("This directory entry is already initialized")
 
@@ -924,6 +941,14 @@ class PyFat(object):
         # FIXME: when adding a new directory, we may have to expand the parent size and the size in the FAT
 
     def rm_dir(self, path):
+        '''
+        A method to remove a directory from the FAT filesystem.
+
+        Parameters:
+         path - The path to the directory to be removed.
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
@@ -947,6 +972,14 @@ class PyFat(object):
         # FIXME: when removing a child, we may have to shrink the parent size in the FAT
 
     def rm_file(self, path):
+        '''
+        A method to remove a file from the FAT filesystem.
+
+        Parameters:
+         path - The path to the file to be removed.
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
@@ -962,6 +995,15 @@ class PyFat(object):
         # FIXME: when removing a child, we may have to shrink the parent size in the FAT
 
     def add_attr(self, path, attr):
+        '''
+        A method to add an attribute to a FAT entry.
+
+        Parameters:
+         path - The path to add the attribute to.
+         attr - The attribute to add; must be one of 'a' (archive), 'r' (read-only), 's' (system), or 'h' (hidden).
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
@@ -973,6 +1015,15 @@ class PyFat(object):
         child.set_attr(attr)
 
     def rm_attr(self, path, attr):
+        '''
+        A method to remove an attribute from a FAT entry.
+
+        Parameters:
+         path - The path to remove the attribute from.
+         attr - The attribute to remove; must be one of 'a' (archive), 'r' (read-only), 's' (system), or 'h' (hidden).
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
@@ -984,6 +1035,14 @@ class PyFat(object):
         child.clear_attr(attr)
 
     def write(self, outfp):
+        '''
+        A method to write this FAT filesystem out to a file.
+
+        Parameters:
+         outfp - The file-like object to write this FAT filesystem to.  Note that this should not be the same as the input file.
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
@@ -1068,6 +1127,15 @@ class PyFat(object):
         outfp.write('\x00'*(self.size_in_kb * 1024 - outfp.tell()))
 
     def close(self):
+        '''
+        A method to close out this object.  Once this is called, the object is
+        no longer valid.
+
+        Parameters:
+         None.
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("Can only call close on an already open object")
 
