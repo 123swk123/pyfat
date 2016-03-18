@@ -21,7 +21,7 @@ def do_a_test(tmpdir, outfile, check_func):
     # Now open up the floppy with pyfat and check some things out.
     fat = pyfat.PyFat()
     fat.open(outfile)
-    check_func(fat, os.stat(outfile).st_size)
+    check_func(fat, tmpdir, os.stat(outfile).st_size)
 
     with open(str(testout), 'wb') as outfp:
         fat.write(outfp)
@@ -30,7 +30,7 @@ def do_a_test(tmpdir, outfile, check_func):
     # Now round-trip through write.
     fat2 = pyfat.PyFat()
     fat2.open(str(testout))
-    check_func(fat2, os.stat(str(testout)).st_size)
+    check_func(fat2, tmpdir, os.stat(str(testout)).st_size)
     fat2.close()
 
 def test_parse_nofiles(tmpdir):

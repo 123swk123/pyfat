@@ -23,11 +23,11 @@ def do_a_test(fat, tmpdir, check_func):
     with open(str(testout), 'wb') as outfp:
         fat.write(outfp)
 
-    check_func(fat, os.stat(str(testout)).st_size)
+    check_func(fat, tmpdir, os.stat(str(testout)).st_size)
 
     fat2 = pyfat.PyFat()
     fat2.open(str(testout))
-    check_func(fat2, os.stat(str(testout)).st_size)
+    check_func(fat2, tmpdir, os.stat(str(testout)).st_size)
     fat2.close()
 
 def test_hybrid_rmfile(tmpdir):

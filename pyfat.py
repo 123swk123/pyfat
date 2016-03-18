@@ -831,47 +831,48 @@ class PyFat(object):
 
         raise PyFatException("Could not find path %s" % (path))
 
-    def get_and_write_file(self, path, outfp):
+    def get_and_write_file(self, fat_path, local_path):
         '''
         A method to get the data from a file on the FAT filesystem.
         The path should be of the form '/dir1/file'.
 
         Parameters:
-         path - The path of the file data to get.
-         outfp - A file-like object to write the data to.
+         fat_path - The path on the FAT filesystem of the file data to get.
+         local_path - The local_path in which to write the data.
         Returns:
          Nothing.
         '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        child, index = self._find_record(path)
+        child, index = self._find_record(fat_path)
 
         if child.is_dir():
             raise PyFatException("Cannot get data from a directory")
 
-        new_cluster_list = self.fat.get_cluster_list(child.first_logical_cluster)
-        if child.original_data_location == child.DATA_ON_ORIGINAL_FAT:
-            # If this is a file that was on the original filesystem,
-            # then we haven't modified the cluster list and the
-            # original is the same as the new.
-            orig_cluster_list = new_cluster_list
-        elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
-            orig_cluster_list = range(0, child.file_size, 512)
+        with open(local_path, 'wb') as outfp:
+            new_cluster_list = self.fat.get_cluster_list(child.first_logical_cluster)
+            if child.original_data_location == child.DATA_ON_ORIGINAL_FAT:
+                # If this is a file that was on the original filesystem,
+                # then we haven't modified the cluster list and the
+                # original is the same as the new.
+                orig_cluster_list = new_cluster_list
+            elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
+                orig_cluster_list = range(0, child.file_size, 512)
 
-        left = child.file_size
-        index = 0
-        while index < len(orig_cluster_list) and left > 0:
-            thisread = 512
-            if left < thisread:
-                thisread = left
+            left = child.file_size
+            index = 0
+            while index < len(orig_cluster_list) and left > 0:
+                thisread = 512
+                if left < thisread:
+                    thisread = left
 
-            child.data_fp.seek(orig_cluster_list[index] * 512)
-            outfp.seek(index * 512)
-            outfp.write(child.data_fp.read(thisread))
+                child.data_fp.seek(orig_cluster_list[index] * 512)
+                outfp.seek(index * 512)
+                outfp.write(child.data_fp.read(thisread))
 
-            left -= thisread
-            index += 1
+                left -= thisread
+                index += 1
 
     def new(self, size_in_kb=1440):
         '''

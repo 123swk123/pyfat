@@ -27,7 +27,7 @@ def internal_check_directory_entry(entry, filename, extension, first_logical_clu
 def internal_check_root(root):
     internal_check_directory_entry(root, '        ', '   ', 0, 0, 0x10)
 
-def check_nofiles(fat, filesize):
+def check_nofiles(fat, tmpdir, filesize):
     assert(filesize == 1474560)
 
     internal_check_boot_sector(fat)
@@ -43,7 +43,7 @@ def check_nofiles(fat, filesize):
     for i in range(2, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
-def check_onefile(fat, filesize):
+def check_onefile(fat, tmpdir, filesize):
     assert(filesize == 1474560)
 
     internal_check_boot_sector(fat)
@@ -61,11 +61,11 @@ def check_onefile(fat, filesize):
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
-    fout = StringIO.StringIO()
-    fat.get_and_write_file("/FOO", fout)
-    assert(fout.getvalue() == "foo\n")
+    foo = tmpdir.join("foo")
+    fat.get_and_write_file("/FOO", str(foo))
+    assert(foo.read() == "foo\n")
 
-def check_onedir(fat, filesize):
+def check_onedir(fat, tmpdir, filesize):
     assert(filesize == 1474560)
 
     internal_check_boot_sector(fat)
@@ -88,7 +88,7 @@ def check_onedir(fat, filesize):
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
-def check_onefile_system(fat, filesize):
+def check_onefile_system(fat, tmpdir, filesize):
     assert(filesize == 1474560)
 
     internal_check_boot_sector(fat)
@@ -106,11 +106,11 @@ def check_onefile_system(fat, filesize):
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
-    fout = StringIO.StringIO()
-    fat.get_and_write_file("/FOO", fout)
-    assert(fout.getvalue() == "foo\n")
+    foo = tmpdir.join("foo")
+    fat.get_and_write_file("/FOO", str(foo))
+    assert(foo.read() == "foo\n")
 
-def check_onefile_archive(fat, filesize):
+def check_onefile_archive(fat, tmpdir, filesize):
     assert(filesize == 1474560)
 
     internal_check_boot_sector(fat)
@@ -128,11 +128,11 @@ def check_onefile_archive(fat, filesize):
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
-    fout = StringIO.StringIO()
-    fat.get_and_write_file("/FOO", fout)
-    assert(fout.getvalue() == "foo\n")
+    foo = tmpdir.join("foo")
+    fat.get_and_write_file("/FOO", str(foo))
+    assert(foo.read() == "foo\n")
 
-def check_onefile_hidden(fat, filesize):
+def check_onefile_hidden(fat, tmpdir, filesize):
     assert(filesize == 1474560)
 
     internal_check_boot_sector(fat)
@@ -150,11 +150,11 @@ def check_onefile_hidden(fat, filesize):
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
-    fout = StringIO.StringIO()
-    fat.get_and_write_file("/FOO", fout)
-    assert(fout.getvalue() == "foo\n")
+    foo = tmpdir.join("foo")
+    fat.get_and_write_file("/FOO", str(foo))
+    assert(foo.read() == "foo\n")
 
-def check_onefile_read_only(fat, filesize):
+def check_onefile_read_only(fat, tmpdir, filesize):
     assert(filesize == 1474560)
 
     internal_check_boot_sector(fat)
@@ -172,11 +172,11 @@ def check_onefile_read_only(fat, filesize):
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
-    fout = StringIO.StringIO()
-    fat.get_and_write_file("/FOO", fout)
-    assert(fout.getvalue() == "foo\n")
+    foo = tmpdir.join("foo")
+    fat.get_and_write_file("/FOO", str(foo))
+    assert(foo.read() == "foo\n")
 
-def check_onefile_all_attr(fat, filesize):
+def check_onefile_all_attr(fat, tmpdir, filesize):
     assert(filesize == 1474560)
 
     internal_check_boot_sector(fat)
@@ -194,11 +194,11 @@ def check_onefile_all_attr(fat, filesize):
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
-    fout = StringIO.StringIO()
-    fat.get_and_write_file("/FOO", fout)
-    assert(fout.getvalue() == "foo\n")
+    foo = tmpdir.join("foo")
+    fat.get_and_write_file("/FOO", str(foo))
+    assert(foo.read() == "foo\n")
 
-def check_onefile_no_attr(fat, filesize):
+def check_onefile_no_attr(fat, tmpdir, filesize):
     assert(filesize == 1474560)
 
     internal_check_boot_sector(fat)
@@ -216,6 +216,6 @@ def check_onefile_no_attr(fat, filesize):
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
-    fout = StringIO.StringIO()
-    fat.get_and_write_file("/FOO", fout)
-    assert(fout.getvalue() == "foo\n")
+    foo = tmpdir.join("foo")
+    fat.get_and_write_file("/FOO", str(foo))
+    assert(foo.read() == "foo\n")
