@@ -17,15 +17,17 @@ import pyfat
 
 from common import *
 
-def do_a_test(fat, check_func):
-    out = StringIO.StringIO()
-    fat.write(out)
+def do_a_test(fat, tmpdir, check_func):
+    testout = tmpdir.join("writetest.img")
 
-    check_func(fat, len(out.getvalue()))
+    with open(str(testout), 'wb') as outfp:
+        fat.write(outfp)
+
+    check_func(fat, os.stat(str(testout)).st_size)
 
     fat2 = pyfat.PyFat()
-    fat2.open(out, len(out.getvalue()) / 1024)
-    check_func(fat2, len(out.getvalue()))
+    fat2.open(str(testout))
+    check_func(fat2, os.stat(str(testout)).st_size)
     fat2.close()
 
 def test_hybrid_rmfile(tmpdir):
@@ -38,14 +40,13 @@ def test_hybrid_rmfile(tmpdir):
 
     fat = pyfat.PyFat()
 
-    with open(str(outfile), 'rb') as fp:
-        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+    fat.open(outfile)
 
-        fat.rm_file("/FOO")
+    fat.rm_file("/FOO")
 
-        do_a_test(fat, check_nofiles)
+    do_a_test(fat, tmpdir, check_nofiles)
 
-        fat.close()
+    fat.close()
 
 def test_hybrid_onefile(tmpdir):
     indir = tmpdir.mkdir("onefile")
@@ -54,15 +55,14 @@ def test_hybrid_onefile(tmpdir):
 
     fat = pyfat.PyFat()
 
-    with open(str(outfile), 'rb') as fp:
-        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+    fat.open(outfile)
 
-        mystr = "foo\n"
-        fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    mystr = "foo\n"
+    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
 
-        do_a_test(fat, check_onefile)
+    do_a_test(fat, tmpdir, check_onefile)
 
-        fat.close()
+    fat.close()
 
 def test_hybrid_onedir(tmpdir):
     indir = tmpdir.mkdir("onedir")
@@ -71,14 +71,13 @@ def test_hybrid_onedir(tmpdir):
 
     fat = pyfat.PyFat()
 
-    with open(str(outfile), 'rb') as fp:
-        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+    fat.open(outfile)
 
-        fat.add_dir("/DIR1")
+    fat.add_dir("/DIR1")
 
-        do_a_test(fat, check_onedir)
+    do_a_test(fat, tmpdir, check_onedir)
 
-        fat.close()
+    fat.close()
 
 def test_hybrid_rmdir(tmpdir):
     indir = tmpdir.mkdir("rmdir")
@@ -88,14 +87,13 @@ def test_hybrid_rmdir(tmpdir):
 
     fat = pyfat.PyFat()
 
-    with open(str(outfile), 'rb') as fp:
-        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+    fat.open(outfile)
 
-        fat.rm_dir("/DIR1")
+    fat.rm_dir("/DIR1")
 
-        do_a_test(fat, check_nofiles)
+    do_a_test(fat, tmpdir, check_nofiles)
 
-        fat.close()
+    fat.close()
 
 def test_hybrid_set_system_file(tmpdir):
     indir = tmpdir.mkdir("setsystemfile")
@@ -107,14 +105,13 @@ def test_hybrid_set_system_file(tmpdir):
 
     fat = pyfat.PyFat()
 
-    with open(str(outfile), 'rb') as fp:
-        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+    fat.open(outfile)
 
-        fat.set_system("/FOO")
+    fat.set_system("/FOO")
 
-        do_a_test(fat, check_onefile_system)
+    do_a_test(fat, tmpdir, check_onefile_system)
 
-        fat.close()
+    fat.close()
 
 def test_hybrid_set_archive_file(tmpdir):
     indir = tmpdir.mkdir("setarchivefile")
@@ -126,14 +123,13 @@ def test_hybrid_set_archive_file(tmpdir):
 
     fat = pyfat.PyFat()
 
-    with open(str(outfile), 'rb') as fp:
-        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+    fat.open(outfile)
 
-        fat.set_archive("/FOO")
+    fat.set_archive("/FOO")
 
-        do_a_test(fat, check_onefile_archive)
+    do_a_test(fat, tmpdir, check_onefile_archive)
 
-        fat.close()
+    fat.close()
 
 def test_hybrid_set_hidden_file(tmpdir):
     indir = tmpdir.mkdir("sethiddenfile")
@@ -145,14 +141,13 @@ def test_hybrid_set_hidden_file(tmpdir):
 
     fat = pyfat.PyFat()
 
-    with open(str(outfile), 'rb') as fp:
-        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+    fat.open(outfile)
 
-        fat.set_hidden("/FOO")
+    fat.set_hidden("/FOO")
 
-        do_a_test(fat, check_onefile_hidden)
+    do_a_test(fat, tmpdir, check_onefile_hidden)
 
-        fat.close()
+    fat.close()
 
 def test_hybrid_set_read_only_file(tmpdir):
     indir = tmpdir.mkdir("setread_onlyfile")
@@ -164,14 +159,13 @@ def test_hybrid_set_read_only_file(tmpdir):
 
     fat = pyfat.PyFat()
 
-    with open(str(outfile), 'rb') as fp:
-        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+    fat.open(outfile)
 
-        fat.set_read_only("/FOO")
+    fat.set_read_only("/FOO")
 
-        do_a_test(fat, check_onefile_read_only)
+    do_a_test(fat, tmpdir, check_onefile_read_only)
 
-        fat.close()
+    fat.close()
 
 def test_hybrid_set_all_attr_file(tmpdir):
     indir = tmpdir.mkdir("setallattrfile")
@@ -183,17 +177,16 @@ def test_hybrid_set_all_attr_file(tmpdir):
 
     fat = pyfat.PyFat()
 
-    with open(str(outfile), 'rb') as fp:
-        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+    fat.open(outfile)
 
-        fat.set_read_only("/FOO")
-        fat.set_archive("/FOO")
-        fat.set_hidden("/FOO")
-        fat.set_system("/FOO")
+    fat.set_read_only("/FOO")
+    fat.set_archive("/FOO")
+    fat.set_hidden("/FOO")
+    fat.set_system("/FOO")
 
-        do_a_test(fat, check_onefile_all_attr)
+    do_a_test(fat, tmpdir, check_onefile_all_attr)
 
-        fat.close()
+    fat.close()
 
 def test_hybrid_set_no_attr_file(tmpdir):
     indir = tmpdir.mkdir("setnoattrfile")
@@ -205,14 +198,13 @@ def test_hybrid_set_no_attr_file(tmpdir):
 
     fat = pyfat.PyFat()
 
-    with open(str(outfile), 'rb') as fp:
-        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+    fat.open(outfile)
 
-        fat.clear_read_only("/FOO")
-        fat.clear_archive("/FOO")
-        fat.clear_hidden("/FOO")
-        fat.clear_system("/FOO")
+    fat.clear_read_only("/FOO")
+    fat.clear_archive("/FOO")
+    fat.clear_hidden("/FOO")
+    fat.clear_system("/FOO")
 
-        do_a_test(fat, check_onefile_no_attr)
+    do_a_test(fat, tmpdir, check_onefile_no_attr)
 
-        fat.close()
+    fat.close()

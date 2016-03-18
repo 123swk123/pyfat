@@ -641,30 +641,32 @@ class PyFat(object):
     BOOT_CODE = "\x0e\x1f\xbe\x5b\x7c\xac\x22\xc0\x74\x0b\x56\xb4\x0e\xbb\x07\x00\xcd\x10\x5e\xeb\xf0\x32\xe4\xcd\x16\xcd\x19\xeb\xfeThis is not a bootable disk.  Please insert a bootable floppy and\r\npress any key to try again ... \r\n"
 
     def __init__(self):
-        self.root_dir_entries = []
+        self.orig_fp = None
         self.initialized = False
 
-    def open(self, infp, size_in_kb):
+    def open(self, filename):
         '''
         A method to open up an existing FAT filesystem.
 
         Parameters:
-         infp - The file-like object containing the FAT filesystem.
-         size_in_kb - The size of the FAT filesystem.
+         filename - The filename that contains the FAT filesystem to open.
         Returns:
          Nothing.
         '''
         if self.initialized:
             raise PyFatException("This object is already initialized")
 
+        self.orig_fp = open(filename, 'rb')
+
+        self.orig_fp.seek(0, os.SEEK_END)
+        size_in_kb = self.orig_fp.tell() / 1024
+
         if size_in_kb != 1440:
             raise PyFatException("Only 1.44MB filesystems are supported")
 
-        self.infp = infp
+        self.orig_fp.seek(0)
 
-        infp.seek(0)
-
-        boot_sector = infp.read(512)
+        boot_sector = self.orig_fp.read(512)
 
         (self.jmp_boot, self.oem_name, self.bytes_per_sector,
          self.sectors_per_cluster, self.reserved_sectors, self.num_fats,
@@ -733,10 +735,10 @@ class PyFat(object):
             self.fat_type = self.FAT32
 
         # Read the first FAT
-        first_fat = infp.read(512 * 9)
+        first_fat = self.orig_fp.read(512 * 9)
 
         # Read the second FAT
-        second_fat = infp.read(512 * 9)
+        second_fat = self.orig_fp.read(512 * 9)
 
         if first_fat != second_fat:
             raise PyFatException("The first FAT and second FAT do not agree; corrupt FAT filesystem")
@@ -746,7 +748,7 @@ class PyFat(object):
 
         # Now walk the root directory entry
         self.root = FATDirectoryEntry()
-        self.root.parse('           \x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None, infp)
+        self.root.parse('           \x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None, self.orig_fp)
         root_cluster_list = []
         for i in range(19, 19+14):
             root_cluster_list.append(i)
@@ -758,8 +760,8 @@ class PyFat(object):
             # Read all of the data for this directory
             data = ''
             for cluster in cluster_list:
-                infp.seek(cluster * 512)
-                data += infp.read(512)
+                self.orig_fp.seek(cluster * 512)
+                data += self.orig_fp.read(512)
 
             read = 0
             while read < len(data):
@@ -774,7 +776,7 @@ class PyFat(object):
                     continue
 
                 ent = FATDirectoryEntry()
-                ent.parse(dir_entry, currdir, infp)
+                ent.parse(dir_entry, currdir, self.orig_fp)
                 currdir.add_child(ent)
                 if ent.is_dir() and not (ent.is_dot() or ent.is_dotdot()):
                     dirs.append((ent, self.fat.get_cluster_list(ent.first_logical_cluster)))
@@ -1312,5 +1314,9 @@ class PyFat(object):
         '''
         if not self.initialized:
             raise PyFatException("Can only call close on an already open object")
+
+        if self.orig_fp is not None:
+            self.orig_fp.close()
+            self.orig_fp = None
 
         self.initialized = False

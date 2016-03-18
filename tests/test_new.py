@@ -16,27 +16,29 @@ import pyfat
 
 from common import *
 
-def do_a_test(fat, check_func):
-    out = StringIO.StringIO()
-    fat.write(out)
+def do_a_test(fat, tmpdir, check_func):
+    testout = tmpdir.join("writetest.img")
 
-    check_func(fat, len(out.getvalue()))
+    with open(str(testout), 'wb') as outfp:
+        fat.write(outfp)
+
+    check_func(fat, os.stat(str(testout)).st_size)
 
     # Now make sure we can re-open the written ISO.
-    pyfat.PyFat().open(out, len(out.getvalue()) / 1024)
+    pyfat.PyFat().open(str(testout))
 
     fat2 = pyfat.PyFat()
-    fat2.open(out, len(out.getvalue()) / 1024)
-    check_func(fat2, len(out.getvalue()))
+    fat2.open(str(testout))
+    check_func(fat2, os.stat(str(testout)).st_size)
     fat2.close()
 
-def test_new_nofiles():
+def test_new_nofiles(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
-    do_a_test(fat, check_nofiles)
+    do_a_test(fat, tmpdir, check_nofiles)
 
-def test_new_rmfile():
+def test_new_rmfile(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
@@ -45,9 +47,9 @@ def test_new_rmfile():
 
     fat.rm_file("/FOO.TXT")
 
-    do_a_test(fat, check_nofiles)
+    do_a_test(fat, tmpdir, check_nofiles)
 
-def test_new_rmfile_no_ext():
+def test_new_rmfile_no_ext(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
@@ -56,35 +58,35 @@ def test_new_rmfile_no_ext():
 
     fat.rm_file("/FOO")
 
-    do_a_test(fat, check_nofiles)
+    do_a_test(fat, tmpdir, check_nofiles)
 
-def test_new_onefile():
+def test_new_onefile(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
     mystr = "foo\n"
     fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
 
-    do_a_test(fat, check_onefile)
+    do_a_test(fat, tmpdir, check_onefile)
 
-def test_new_onedir():
+def test_new_onedir(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
     fat.add_dir("/DIR1")
 
-    do_a_test(fat, check_onedir)
+    do_a_test(fat, tmpdir, check_onedir)
 
-def test_new_rmdir():
+def test_new_rmdir(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
     fat.add_dir("/DIR1")
     fat.rm_dir("/DIR1")
 
-    do_a_test(fat, check_nofiles)
+    do_a_test(fat, tmpdir, check_nofiles)
 
-def test_new_onefile_system():
+def test_new_onefile_system(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
@@ -92,9 +94,9 @@ def test_new_onefile_system():
     fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
     fat.set_system("/FOO")
 
-    do_a_test(fat, check_onefile_system)
+    do_a_test(fat, tmpdir, check_onefile_system)
 
-def test_new_onefile_archive():
+def test_new_onefile_archive(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
@@ -102,9 +104,9 @@ def test_new_onefile_archive():
     fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
     fat.set_archive("/FOO")
 
-    do_a_test(fat, check_onefile_archive)
+    do_a_test(fat, tmpdir, check_onefile_archive)
 
-def test_new_onefile_hidden():
+def test_new_onefile_hidden(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
@@ -112,9 +114,9 @@ def test_new_onefile_hidden():
     fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
     fat.set_hidden("/FOO")
 
-    do_a_test(fat, check_onefile_hidden)
+    do_a_test(fat, tmpdir, check_onefile_hidden)
 
-def test_new_onefile_read_only():
+def test_new_onefile_read_only(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
@@ -122,9 +124,9 @@ def test_new_onefile_read_only():
     fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
     fat.set_read_only("/FOO")
 
-    do_a_test(fat, check_onefile_read_only)
+    do_a_test(fat, tmpdir, check_onefile_read_only)
 
-def test_new_onefile_all_attr():
+def test_new_onefile_all_attr(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
@@ -135,9 +137,9 @@ def test_new_onefile_all_attr():
     fat.set_system("/FOO")
     fat.set_archive("/FOO")
 
-    do_a_test(fat, check_onefile_all_attr)
+    do_a_test(fat, tmpdir, check_onefile_all_attr)
 
-def test_new_onefile_no_attr():
+def test_new_onefile_no_attr(tmpdir):
     fat = pyfat.PyFat()
     fat.new()
 
@@ -148,4 +150,4 @@ def test_new_onefile_no_attr():
     fat.clear_system("/FOO")
     fat.clear_archive("/FOO")
 
-    do_a_test(fat, check_onefile_no_attr)
+    do_a_test(fat, tmpdir, check_onefile_no_attr)
