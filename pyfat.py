@@ -189,7 +189,7 @@ class FATDirectoryEntry(object):
         expandext = "{:<3}".format(ext)
 
         foundindex = None
-        for index,child in enumerate(self.children):
+        for index, child in enumerate(self.children):
             if child.filename == expandname and child.extension == expandext:
                 foundindex = index
                 break
@@ -257,7 +257,7 @@ class FAT12(object):
         curr = 2
         while curr < total_entries:
             offset = (3*curr)/2
-            low,high = struct.unpack("=BB", fatstring[offset:offset+2])
+            low, high = struct.unpack("=BB", fatstring[offset:offset+2])
             if curr % 2 == 0:
                 # even
                 fat_entry = ((high & 0x0f) << 8) | low
@@ -473,7 +473,7 @@ class PyFat(object):
 
         dirs = collections.deque([(self.root, root_cluster_list)])
         while dirs:
-            currdir,cluster_list = dirs.popleft()
+            currdir, cluster_list = dirs.popleft()
 
             # Read all of the data for this directory
             data = ''
@@ -530,7 +530,7 @@ class PyFat(object):
             if splitindex == len(splitpath):
                 # We have to remove one from the index since we incremented it
                 # above.
-                return child,index-1
+                return child, index-1
             else:
                 if child.is_dir():
                     children = child.children
@@ -544,7 +544,7 @@ class PyFat(object):
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        child,index = self._find_record(path)
+        child, index = self._find_record(path)
 
         new_cluster_list = self.fat.get_cluster_list(child.first_logical_cluster)
         if child.original_data_location == child.DATA_ON_ORIGINAL_FAT:
@@ -622,7 +622,7 @@ class PyFat(object):
             # This is a new directory under the root, add it there
             parent = self.root
         else:
-            parent,index = self._find_record('/' + '/'.join(splitpath))
+            parent, index = self._find_record('/' + '/'.join(splitpath))
 
         return (name, parent)
 
@@ -630,9 +630,9 @@ class PyFat(object):
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        filename,parent = self._name_and_parent_from_path(path)
+        filename, parent = self._name_and_parent_from_path(path)
 
-        name,ext = os.path.splitext(filename)
+        name, ext = os.path.splitext(filename)
         if len(ext) > 0 and ext[0] == '.':
             ext = ext[1:]
 
@@ -649,9 +649,9 @@ class PyFat(object):
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        filename,parent = self._name_and_parent_from_path(path)
+        filename, parent = self._name_and_parent_from_path(path)
 
-        name,ext = os.path.splitext(filename)
+        name, ext = os.path.splitext(filename)
 
         first_cluster = self.fat.add_entry(512)
 
@@ -674,7 +674,7 @@ class PyFat(object):
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        child,index = self._find_record(path)
+        child, index = self._find_record(path)
 
         if not child.is_dir():
             raise PyFatException("Cannot remove file; try rm_file instead")
@@ -697,7 +697,7 @@ class PyFat(object):
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        child,index = self._find_record(path)
+        child, index = self._find_record(path)
 
         if child.is_dir():
             raise PyFatException("Cannot remove directory; try rm_dir instead")
@@ -715,7 +715,7 @@ class PyFat(object):
         if attr not in ['a', 'r', 's', 'h']:
             raise PyFatException("This method only supports adding the 'a' (archive), 'r' (read-only), 's' (system), and 'h' (hidden) attributes")
 
-        child,index = self._find_record(path)
+        child, index = self._find_record(path)
 
         child.set_attr(attr)
 
@@ -726,7 +726,7 @@ class PyFat(object):
         if attr not in ['a', 'r', 's', 'h']:
             raise PyFatException("This method only supports adding the 'a' (archive), 'r' (read-only), 's' (system), and 'h' (hidden) attributes")
 
-        child,index = self._find_record(path)
+        child, index = self._find_record(path)
 
         child.clear_attr(attr)
 
@@ -763,7 +763,7 @@ class PyFat(object):
 
         dirs = collections.deque([(self.root, root_cluster_list)])
         while dirs:
-            currdir,physical_clusters = dirs.popleft()
+            currdir, physical_clusters = dirs.popleft()
 
             cluster_iter = iter(physical_clusters)
             outfp.seek(cluster_iter.next() * 512)
