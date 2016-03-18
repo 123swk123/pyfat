@@ -58,6 +58,9 @@ def ceiling_div(numer, denom):
     return -(-numer // denom)
 
 class FATDirectoryEntry(object):
+    '''
+    The object that represents a single FAT Directory Entry.
+    '''
     DATA_ON_ORIGINAL_FAT = 1
     DATA_IN_EXTERNAL_FP = 2
 
@@ -65,6 +68,18 @@ class FATDirectoryEntry(object):
         self.initialized = False
 
     def parse(self, instr, parent, data_fp):
+        '''
+        Method to parse a directory entry out of a string.  The string must be
+        exactly 32 bytes long for this to succeed.
+
+        Parameters:
+         instr - The string to parse.
+         parent - The parent of this directory entry.
+         data_fp - The file pointer for the backing file that contains this
+                   directory entry.
+        Returns:
+         Nothing.
+        '''
         if self.initialized:
             raise PyFatException("This directory entry is already initialized")
 
@@ -85,6 +100,19 @@ class FATDirectoryEntry(object):
         self.initialized = True
 
     def _new(self, filename, extension, is_dir, first_logical_cluster, file_size, parent):
+        '''
+        Internal method to create a new directory entry.
+
+        Parameters:
+         filename - The filename to give to this directory entry; it must be 8 characters or less.
+         extension - The extension to give to this directory entry; it must be 3 characters or less.
+         is_dir - Whether this new entry is a directory.
+         first_logical_cluster - The first logical cluster in the FAT for this directory entry.
+         file_size - The file size of this directory entry.
+         parent - The parent of this directory entry.
+        Returns:
+         Nothing.
+        '''
         if len(filename) > 8:
             raise PyFatException("Filename is too long (must be 8 or shorter)")
 
@@ -119,6 +147,15 @@ class FATDirectoryEntry(object):
         self.initialized = True
 
     def new_root(self):
+        '''
+        A method to create a new root.  Note that every FAT filesystem must have
+        one and only one root.
+
+        Parameters:
+         None.
+        Returns:
+         Nothing.
+        '''
         if self.initialized:
             raise PyFatException("This directory entry is already initialized")
 
@@ -134,36 +171,90 @@ class FATDirectoryEntry(object):
 
 
     def new_dir(self, parent, filename, extension, first_logical_cluster):
+        '''
+        A method to create a new directory.
+
+        Parameters:
+         parent - The parent of the new directory.
+         filename - The filename for the new directory.
+         extension - The extension for the new directory.
+         first_logical_cluster - The first logical cluster for the new directory.
+        Returns:
+         Nothing.
+        '''
         if self.initialized:
             raise PyFatException("This directory entry is already initialized")
 
         self._new(filename, extension, True, first_logical_cluster, 0, parent)
 
     def new_dot(self, parent, first_logical_cluster):
+        '''
+        A method to create a new '.' directory.  Every directory must start
+        with a '.' and '..' entry.
+
+        Parameters:
+         parent - The parent for the new '.' directory.
+         first_logical_cluster - The first logical cluster for the new '.' directory.  Note that this will be the same as the first logical cluster for the parent.
+        Returns:
+         Nothing.
+        '''
         if self.initialized:
             raise PyFatException("This directory entry is already initialized")
 
         self._new('.', '', True, first_logical_cluster, 0, parent)
 
     def new_dotdot(self, parent):
+        '''
+        A method to create a new '..' directory.  Every directory must start
+        with a '.' and '..' entry.
+
+        Parameters:
+         parent - The parent for the new '..' directory.
+        Returns:
+         Nothing.
+        '''
         if self.initialized:
             raise PyFatException("This directory entry is already initialized")
 
         self._new('..', '', True, 0, 0, parent)
 
     def is_dir(self):
+        '''
+        A method to determine whether this entry is a directory.
+
+        Parameters:
+         None.
+        Returns:
+         True if this entry is a directory, False otherwise.
+        '''
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
         return self.attributes & 0x10
 
     def is_dot(self):
+        '''
+        A method to determine whether this entry is a '.' entry.
+
+        Parameters:
+         None.
+        Returns:
+         True if this entry is a '.' entry, False otherwise.
+        '''
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
         return self.filename == '.       '
 
     def is_dotdot(self):
+        '''
+        A method to determine whether this entry is a '..' entry.
+
+        Parameters:
+         None.
+        Returns:
+         True if this entry is a '..' entry, False otherwise.
+        '''
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
