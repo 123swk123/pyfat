@@ -123,3 +123,16 @@ def test_new_onefile_read_only():
     fat.set_read_only("/FOO")
 
     do_a_test(fat, check_onefile_read_only)
+
+def test_new_onefile_all_attr():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    mystr = "foo\n"
+    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    fat.set_read_only("/FOO")
+    fat.set_hidden("/FOO")
+    fat.set_system("/FOO")
+    fat.set_archive("/FOO")
+
+    do_a_test(fat, check_onefile_all_attr)
