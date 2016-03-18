@@ -19,7 +19,6 @@ import collections
 import os
 import time
 
-# FIXME: document all methods
 # FIXME: add support for FAT16
 # FIXME: add support for FAT32
 
@@ -59,7 +58,7 @@ def ceiling_div(numer, denom):
 
 class FATDirectoryEntry(object):
     '''
-    The object that represents a single FAT Directory Entry.
+    The class that represents a single FAT Directory Entry.
     '''
     DATA_ON_ORIGINAL_FAT = 1
     DATA_IN_EXTERNAL_FP = 2
@@ -282,12 +281,35 @@ class FATDirectoryEntry(object):
         self.children.append(child)
 
     def remove_child(self, index):
+        '''
+        A method to remove a child from this entry.  This is only valid if
+        this entry is a directory, and is not '.' or '..'.
+
+        Parameters:
+         index - The index of the child in this directory entry's array.
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
+        if not self.is_dir():
+            raise PyFatException("Can only remove children from directories")
+
+        if self.is_dot() or self.is_dotdot():
+            raise PyFatException("Cannot remove children from dot or dotdot")
+
         del self.children[index]
 
-    def directory_record(self):
+    def record(self):
+        '''
+        A method to generate a string representing this directory entry.
+
+        Parameters:
+         None.
+        Returns:
+         A string representing this directory entry.
+        '''
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
@@ -299,6 +321,14 @@ class FATDirectoryEntry(object):
                            self.first_logical_cluster, self.file_size)
 
     def set_attr(self, attr):
+        '''
+        A method to set an attribute on this directory entry.
+
+        Parameters:
+         attr - The attribute to set.  Must be one of 'r' (read-only), 'h' (hidden), 's' (system), or 'a' (archive).
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
@@ -314,6 +344,14 @@ class FATDirectoryEntry(object):
             raise PyFatException("Invalid flag to set_attr")
 
     def clear_attr(self, attr):
+        '''
+        A method to clear an attribute from this directory entry.
+
+        Parameters:
+         attr - The attribute to clear.  Must be one of 'r' (read-only), 'h' (hidden), 's' (system), or 'a' (archive).
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
@@ -329,12 +367,28 @@ class FATDirectoryEntry(object):
             raise PyFatException("Invalid flag to clear_attr")
 
 class FAT12(object):
+    '''
+    The class that represents the FAT (File Allocation Table) for this
+    filesystem.  This class represents the 12-bit FAT.
+    '''
     def __init__(self):
         self.initialized = False
 
     def parse(self, fatstring):
+        '''
+        Method to parse a FAT out of a string.  The string must be
+        exactly 32 bytes long for this to succeed.
+
+        Parameters:
+         fatstr - The string to parse.
+        Returns:
+         Nothing.
+        '''
         if self.initialized:
             raise PyFatException("This object is already initialized")
+
+        if len(fatstring) != 512 * 9:
+            raise PyFatException("Invalid length on FAT12 string")
 
         total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) / bytes per entry (1.5)
 
@@ -359,6 +413,15 @@ class FAT12(object):
         self.initialized = True
 
     def new(self):
+        '''
+        A method to create a new FAT12.  All entries are initially set to 0
+        (unallocated), except for the first two.
+
+        Parameters:
+         None.
+        Returns:
+         Nothing.
+        '''
         if self.initialized:
             raise PyFatException("This object is already initialized")
 
@@ -371,6 +434,15 @@ class FAT12(object):
         self.initialized = True
 
     def get_cluster_list(self, first_logical_cluster):
+        '''
+        A method to get the physical cluster list, given the first logical
+        cluster in a chain.
+
+        Parameters:
+         first_logical_cluster - The logical cluster to start with.
+        Returns:
+         A list containing all of the physical cluster locations for this chain.
+        '''
         # FIXME: we should make this a generator
 
         if not self.initialized:
@@ -389,6 +461,15 @@ class FAT12(object):
         return physical_clusters
 
     def add_entry(self, length):
+        '''
+        A method to add a new entry to the FAT.  As many entries as necessary
+        to cover the length will be allocated and linked together.
+
+        Parameters:
+         length - The length of the entry to be allocated.
+        Returns:
+         The first logical cluster.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
@@ -421,6 +502,14 @@ class FAT12(object):
         return first_cluster
 
     def remove_entry(self, first_logical_cluster):
+        '''
+        A method to remove a chain of clusters from the FAT.
+
+        Parameters:
+         first_logical_cluster - The cluster to start from.
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
@@ -436,6 +525,14 @@ class FAT12(object):
             curr = nextcluster
 
     def record(self):
+        '''
+        A method to generate a string representing this File Allocation Table.
+
+        Parameters:
+         None.
+        Returns:
+         A string representing this File Allocation Table.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
@@ -450,6 +547,9 @@ class FAT12(object):
         return ret
 
 class PyFat(object):
+    '''
+    The main class to open or create FAT filesystems.
+    '''
     FAT12 = 0
     FAT16 = 1
     FAT32 = 2
@@ -462,11 +562,20 @@ class PyFat(object):
         self.initialized = False
 
     def open(self, infp, size_in_kb):
+        '''
+        A method to open up an existing FAT filesystem.
+
+        Parameters:
+         infp - The file-like object containing the FAT filesystem.
+         size_in_kb - The size of the FAT filesystem.
+        Returns:
+         Nothing.
+        '''
         if self.initialized:
             raise PyFatException("This object is already initialized")
 
         if size_in_kb != 1440:
-            raise PyFatException("Only 1.44MB floppy disks supported")
+            raise PyFatException("Only 1.44MB filesystems are supported")
 
         self.infp = infp
 
@@ -590,6 +699,15 @@ class PyFat(object):
         self.initialized = True
 
     def _find_record(self, path):
+        '''
+        An internal method to find a FAT directory entry based on a given path.
+        The path should be of the form '/dir1/file'.
+
+        Parameters:
+         path - The path to find in the filesystem.
+        Returns:
+         A tuple of the FAT directory entry object and index of the object into the parent's child list.
+        '''
         if path[0] != '/':
             raise PyFatException("Must be a path starting with /")
 
@@ -629,10 +747,23 @@ class PyFat(object):
         raise PyFatException("Could not find path %s" % (path))
 
     def get_and_write_file(self, path, outfp):
+        '''
+        A method to get the data from a file on the FAT filesystem.
+        The path should be of the form '/dir1/file'.
+
+        Parameters:
+         path - The path of the file data to get.
+         outfp - A file-like object to write the data to.
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
         child, index = self._find_record(path)
+
+        if child.is_dir():
+            raise PyFatException("Cannot get data from a directory")
 
         new_cluster_list = self.fat.get_cluster_list(child.first_logical_cluster)
         if child.original_data_location == child.DATA_ON_ORIGINAL_FAT:
@@ -658,6 +789,14 @@ class PyFat(object):
             index += 1
 
     def new(self, size_in_kb=1440):
+        '''
+        A method to create a new FAT filesystem.
+
+        Parameters:
+         size_in_kb - The size of the filesystem in kilobytes.
+        Returns:
+         Nothing.
+        '''
         if self.initialized:
             raise PyFatException("This object is already initialized")
 
@@ -696,6 +835,14 @@ class PyFat(object):
         self.initialized = True
 
     def _name_and_parent_from_path(self, path):
+        '''
+        An internal method to get the original name and parent given a pathname.
+
+        Parameters:
+         path - The path to find the parent and name for.
+        Returns:
+         A tuple of the name and the parent.
+        '''
         if path[0] != '/':
             raise PyFatException("Must be a path starting with /")
 
@@ -715,6 +862,16 @@ class PyFat(object):
         return (name, parent)
 
     def add_fp(self, path, infp, length):
+        '''
+        A method to add a new file to the filesystem.
+
+        Parameters:
+         path - The path on the FAT filesystem to add the file.
+         infp - The file-like object containin the data for the file.
+         length - The length of the file.
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
@@ -734,6 +891,14 @@ class PyFat(object):
         # FIXME: when adding a new file, we may have to expand the parent size and the size in the FAT
 
     def add_dir(self, path):
+        '''
+        A method to add a new directory to the FAT filesystem.
+
+        Parameters:
+         path - The path at which to create the new directory.
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
@@ -861,7 +1026,7 @@ class PyFat(object):
                     cluster_offset = 0
                     outfp.seek(cluster_iter.next() * 512)
 
-                outfp.write(child.directory_record())
+                outfp.write(child.record())
                 cluster_offset += 32
 
                 if child.is_dir() and not (child.is_dot() or child.is_dotdot()):
