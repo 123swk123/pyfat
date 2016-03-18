@@ -83,3 +83,43 @@ def test_new_rmdir():
     fat.rm_dir("/DIR1")
 
     do_a_test(fat, check_nofiles)
+
+def test_new_onefile_system():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    mystr = "foo\n"
+    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    fat.set_system("/FOO")
+
+    do_a_test(fat, check_onefile_system)
+
+def test_new_onefile_archive():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    mystr = "foo\n"
+    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    fat.set_archive("/FOO")
+
+    do_a_test(fat, check_onefile_archive)
+
+def test_new_onefile_hidden():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    mystr = "foo\n"
+    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    fat.set_hidden("/FOO")
+
+    do_a_test(fat, check_onefile_hidden)
+
+def test_new_onefile_read_only():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    mystr = "foo\n"
+    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    fat.set_read_only("/FOO")
+
+    do_a_test(fat, check_onefile_read_only)
