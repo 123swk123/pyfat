@@ -281,23 +281,11 @@ class FATDirectoryEntry(object):
 
         self.children.append(child)
 
-    def remove_child(self, name, ext):
+    def remove_child(self, index):
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
-        expandname = "{:<8}".format(name)
-        expandext = "{:<3}".format(ext)
-
-        foundindex = None
-        for index, child in enumerate(self.children):
-            if child.filename == expandname and child.extension == expandext:
-                foundindex = index
-                break
-
-        if foundindex is None:
-            raise PyFatException("Could not find child")
-
-        del self.children[foundindex]
+        del self.children[index]
 
     def directory_record(self):
         if not self.initialized:
@@ -789,7 +777,7 @@ class PyFat(object):
 
         self.fat.remove_entry(child.first_logical_cluster)
 
-        child.parent.remove_child(child.filename, child.extension)
+        child.parent.remove_child(index)
 
         # FIXME: when removing a child, we may have to shrink the parent size in the FAT
 
@@ -804,7 +792,7 @@ class PyFat(object):
 
         self.fat.remove_entry(child.first_logical_cluster)
 
-        child.parent.remove_child(child.filename, child.extension)
+        child.parent.remove_child(index)
 
         # FIXME: when removing a child, we may have to shrink the parent size in the FAT
 
