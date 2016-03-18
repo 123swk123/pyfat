@@ -79,3 +79,20 @@ def test_hybrid_onedir(tmpdir):
         do_a_test(fat, check_onedir)
 
         fat.close()
+
+def test_hybrid_rmdir(tmpdir):
+    indir = tmpdir.mkdir("rmdir")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    subprocess.call(["mmd", "-i", str(outfile), "DIR1"])
+
+    fat = pyfat.PyFat()
+
+    with open(str(outfile), 'rb') as fp:
+        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+
+        fat.rm_dir("/DIR1")
+
+        do_a_test(fat, check_nofiles)
+
+        fat.close()

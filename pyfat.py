@@ -635,8 +635,6 @@ class PyFat(object):
 
     # FIXME: implement the ability to manipulate attributes
 
-    # FIXME: add the ability to remove directories
-
     def rm_dir(self, path):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
