@@ -124,9 +124,10 @@ def test_parse_onefile_no_attr(tmpdir):
     indir = tmpdir.mkdir("onefilenoattr")
     outfile = str(indir) + ".img"
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
-    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
         outfp.write("foo\n")
-    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::FOO"])
     subprocess.call(["mattrib", "-r", "-i", str(outfile), "::FOO"])
     subprocess.call(["mattrib", "-h", "-i", str(outfile), "::FOO"])
     subprocess.call(["mattrib", "-s", "-i", str(outfile), "::FOO"])
