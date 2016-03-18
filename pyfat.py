@@ -526,7 +526,7 @@ class PyFat(object):
         if self.sectors_per_fat != 0:
             fat_size = self.sectors_per_fat
         else:
-            raise PyIsoException("Only support FAT12 right now!")
+            raise PyFatException("Only support FAT12 right now!")
 
         if self.sector_count != 0:
             total_sectors = self.sector_count
