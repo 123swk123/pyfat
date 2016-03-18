@@ -58,6 +58,8 @@ def check_onefile(fat, filesize):
     assert(fat.fat.fat[0] == 0xf0)
     assert(fat.fat.fat[1] == 0xff)
     assert(fat.fat.fat[2] == 0xfff)
+    for i in range(3, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)
 
     fout = StringIO.StringIO()
     fat.get_and_write_file("/FOO", fout)
@@ -83,3 +85,5 @@ def check_onedir(fat, filesize):
     assert(fat.fat.fat[0] == 0xf0)
     assert(fat.fat.fat[1] == 0xff)
     assert(fat.fat.fat[2] == 0xfff)
+    for i in range(3, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)
