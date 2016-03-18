@@ -97,8 +97,10 @@ class FATDirectoryEntry(object):
         self.parent = parent
         self.children = []
 
-        self.data_fp = data_fp
-        self.original_data_location = self.DATA_ON_ORIGINAL_FAT
+        if not self.attributes & 0x10:
+            # Save the data pointer and original data location only for files
+            self.data_fp = data_fp
+            self.original_data_location = self.DATA_ON_ORIGINAL_FAT
 
         self.initialized = True
 
@@ -1317,6 +1319,17 @@ class PyFat(object):
         '''
         if not self.initialized:
             raise PyFatException("Can only call close on an already open object")
+
+        # Walk the entire directory tree, closing out file object as necessary.
+        dirs = collections.deque([self.root])
+        while dirs:
+            currdir = dirs.popleft()
+
+            for child in currdir.children:
+                if child.is_dir():
+                    dirs.append(child)
+                else:
+                    child.data_fp.close()
 
         if self.orig_fp is not None:
             self.orig_fp.close()
