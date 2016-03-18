@@ -261,6 +261,15 @@ class FATDirectoryEntry(object):
         return self.filename == '..      '
 
     def add_child(self, child):
+        '''
+        A method to add a new child to this entry.  This is only valid if this
+        entry is a directory, and is not '.' or '..'.
+
+        Parameters:
+         child - Directory entry object to as child of this entry.
+        Returns:
+         Nothing.
+        '''
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
