@@ -205,6 +205,36 @@ class FATDirectoryEntry(object):
                            self.last_write_time, self.last_write_date,
                            self.first_logical_cluster, self.file_size)
 
+    def set_attr(self, attr):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
+
+        if attr == 'r':
+            self.attributes |= 0x01
+        elif attr == 'h':
+            self.attributes |= 0x02
+        elif attr == 's':
+            self.attributes |= 0x04
+        elif attr == 'a':
+            self.attributes |= 0x20
+        else:
+            raise Exception("Invalid flag to set_attr")
+
+    def clear_attr(self, attr):
+        if not self.initialized:
+            raise Exception("This directory entry is not yet initialized")
+
+        if attr == 'r':
+            self.attributes &= ~0x01
+        elif attr == 'h':
+            self.attributes &= ~0x02
+        elif attr == 's':
+            self.attributes &= ~0x04
+        elif attr == 'a':
+            self.attributes &= ~0x20
+        else:
+            raise Exception("Invalid flag to clear_attr")
+
 class FAT12(object):
     def __init__(self):
         self.initialized = False
@@ -633,8 +663,6 @@ class PyFat(object):
         dotdot.new_dotdot(parent)
         child.add_child(dotdot)
 
-    # FIXME: implement the ability to manipulate attributes
-
     def rm_dir(self, path):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
@@ -672,6 +700,28 @@ class PyFat(object):
         child.parent.remove_child(child.filename, child.extension)
 
         # FIXME: when removing a child, we may have to shrink the parent size in the FAT
+
+    def add_attr(self, path, attr):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        if attr not in ['a', 'r', 's', 'h']:
+            raise Exception("This method only supports adding the 'a' (archive), 'r' (read-only), 's' (system), and 'h' (hidden) attributes")
+
+        child,index = self._find_record(path)
+
+        child.set_attr(attr)
+
+    def rm_attr(self, path, attr):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        if attr not in ['a', 'r', 's', 'h']:
+            raise Exception("This method only supports adding the 'a' (archive), 'r' (read-only), 's' (system), and 'h' (hidden) attributes")
+
+        child,index = self._find_record(path)
+
+        child.clear_attr(attr)
 
     def write(self, outfp):
         if not self.initialized:
