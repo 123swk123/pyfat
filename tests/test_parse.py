@@ -22,9 +22,7 @@ def do_a_test(tmpdir, outfile, check_func):
     fat = pyfat.PyFat()
     fat.open(outfile)
     check_func(fat, tmpdir, os.stat(outfile).st_size)
-
-    with open(str(testout), 'wb') as outfp:
-        fat.write(outfp)
+    fat.write(str(testout))
     fat.close()
 
     # Now round-trip through write.

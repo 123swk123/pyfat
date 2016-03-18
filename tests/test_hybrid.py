@@ -20,8 +20,7 @@ from common import *
 def do_a_test(fat, tmpdir, check_func):
     testout = tmpdir.join("writetest.img")
 
-    with open(str(testout), 'wb') as outfp:
-        fat.write(outfp)
+    fat.write(str(testout))
 
     check_func(fat, tmpdir, os.stat(str(testout)).st_size)
 

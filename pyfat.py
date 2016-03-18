@@ -1215,97 +1215,101 @@ class PyFat(object):
 
         child.clear_attr(attr)
 
-    def write(self, outfp):
+    def write(self, local_path):
         '''
         A method to write this FAT filesystem out to a file.
 
         Parameters:
-         outfp - The file-like object to write this FAT filesystem to.  Note that this should not be the same as the input file.
+         local_path - The local file to write this FAT filesystem to.
         Returns:
          Nothing.
         '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        # First write out the boot entry
-        outfp.seek(0 * 512)
-        outfp.write(struct.pack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH", self.jmp_boot,
-                                self.oem_name, self.bytes_per_sector,
-                                self.sectors_per_cluster, self.reserved_sectors,
-                                self.num_fats, self.max_root_dir_entries,
-                                self.sector_count, self.media,
-                                self.sectors_per_fat,
-                                self.sectors_per_track, self.num_heads,
-                                self.hidden_sectors,
-                                self.total_sector_count_32, self.drive_num,
-                                0, self.boot_sig, self.volume_id,
-                                self.volume_label, self.fs_type, self.boot_code, 0xaa55))
+        with open(local_path, 'wb') as outfp:
+            # First write out the boot entry
+            outfp.seek(0 * 512)
+            outfp.write(struct.pack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH",
+                                    self.jmp_boot, self.oem_name,
+                                    self.bytes_per_sector,
+                                    self.sectors_per_cluster,
+                                    self.reserved_sectors,
+                                    self.num_fats, self.max_root_dir_entries,
+                                    self.sector_count, self.media,
+                                    self.sectors_per_fat,
+                                    self.sectors_per_track, self.num_heads,
+                                    self.hidden_sectors,
+                                    self.total_sector_count_32, self.drive_num,
+                                    0, self.boot_sig, self.volume_id,
+                                    self.volume_label, self.fs_type,
+                                    self.boot_code, 0xaa55))
 
-        # Now write out the first FAT
-        outfp.seek(1 * 512)
-        outfp.write(self.fat.record())
+            # Now write out the first FAT
+            outfp.seek(1 * 512)
+            outfp.write(self.fat.record())
 
-        # Now write out the second FAT
-        outfp.seek(10 * 512)
-        outfp.write(self.fat.record())
+            # Now write out the second FAT
+            outfp.seek(10 * 512)
+            outfp.write(self.fat.record())
 
-        # Now write out the directory entries
-        root_cluster_list = []
-        for i in range(19, 19+14):
-            root_cluster_list.append(i)
+            # Now write out the directory entries
+            root_cluster_list = []
+            for i in range(19, 19+14):
+                root_cluster_list.append(i)
 
-        dirs = collections.deque([(self.root, root_cluster_list)])
-        while dirs:
-            currdir, physical_clusters = dirs.popleft()
+            dirs = collections.deque([(self.root, root_cluster_list)])
+            while dirs:
+                currdir, physical_clusters = dirs.popleft()
 
-            cluster_iter = iter(physical_clusters)
-            outfp.seek(cluster_iter.next() * 512)
-            cluster_offset = 0
-            for child in currdir.children:
-                if cluster_offset + 32 > 512:
-                    cluster_offset = 0
-                    outfp.seek(cluster_iter.next() * 512)
+                cluster_iter = iter(physical_clusters)
+                outfp.seek(cluster_iter.next() * 512)
+                cluster_offset = 0
+                for child in currdir.children:
+                    if cluster_offset + 32 > 512:
+                        cluster_offset = 0
+                        outfp.seek(cluster_iter.next() * 512)
 
-                outfp.write(child.record())
-                cluster_offset += 32
+                    outfp.write(child.record())
+                    cluster_offset += 32
 
-                if child.is_dir() and not (child.is_dot() or child.is_dotdot()):
-                    dirs.append((child, self.fat.get_cluster_list(child.first_logical_cluster)))
+                    if child.is_dir() and not (child.is_dot() or child.is_dotdot()):
+                        dirs.append((child, self.fat.get_cluster_list(child.first_logical_cluster)))
 
-        # Now write out the files
-        dirs = collections.deque([self.root])
-        while dirs:
-            currdir = dirs.popleft()
+            # Now write out the files
+            dirs = collections.deque([self.root])
+            while dirs:
+                currdir = dirs.popleft()
 
-            for child in currdir.children:
-                if child.is_dir():
-                    dirs.append(child)
-                else:
-                    new_cluster_list = self.fat.get_cluster_list(child.first_logical_cluster)
-                    if child.original_data_location == child.DATA_ON_ORIGINAL_FAT:
-                        # If this is a file that was on the original filesystem,
-                        # then we haven't modified the cluster list and the
-                        # original is the same as the new.
-                        orig_cluster_list = new_cluster_list
-                    elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
-                        orig_cluster_list = range(0, child.file_size, 512)
+                for child in currdir.children:
+                    if child.is_dir():
+                        dirs.append(child)
+                    else:
+                        new_cluster_list = self.fat.get_cluster_list(child.first_logical_cluster)
+                        if child.original_data_location == child.DATA_ON_ORIGINAL_FAT:
+                            # If this is a file that was on the original
+                            # filesystem, then we haven't modified the cluster
+                            # list and the original is the same as the new.
+                            orig_cluster_list = new_cluster_list
+                        elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
+                            orig_cluster_list = range(0, child.file_size, 512)
 
-                    left = child.file_size
-                    index = 0
-                    while index < len(orig_cluster_list) and left > 0:
-                        thisread = 512
-                        if left < thisread:
-                            thisread = left
+                        left = child.file_size
+                        index = 0
+                        while index < len(orig_cluster_list) and left > 0:
+                            thisread = 512
+                            if left < thisread:
+                                thisread = left
 
-                        child.data_fp.seek(orig_cluster_list[index] * 512)
-                        outfp.seek(new_cluster_list[index] * 512)
-                        outfp.write(child.data_fp.read(thisread))
+                            child.data_fp.seek(orig_cluster_list[index] * 512)
+                            outfp.seek(new_cluster_list[index] * 512)
+                            outfp.write(child.data_fp.read(thisread))
 
-                        left -= thisread
-                        index += 1
+                            left -= thisread
+                            index += 1
 
-        # Finally, truncate the file out to its final size
-        outfp.write('\x00'*(self.size_in_kb * 1024 - outfp.tell()))
+            # Finally, truncate the file out to its final size
+            outfp.write('\x00'*(self.size_in_kb * 1024 - outfp.tell()))
 
     def close(self):
         '''
