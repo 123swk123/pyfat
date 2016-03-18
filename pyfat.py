@@ -663,6 +663,8 @@ class PyFat(object):
         dotdot.new_dotdot(parent)
         child.add_child(dotdot)
 
+        # FIXME: when adding a new directory, we may have to expand the parent size and the size in the FAT
+
     def rm_dir(self, path):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
