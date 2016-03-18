@@ -337,51 +337,117 @@ class FATDirectoryEntry(object):
                            self.last_write_time, self.last_write_date,
                            self.first_logical_cluster, self.file_size)
 
-    def set_attr(self, attr):
+    def set_hidden(self):
         '''
-        A method to set an attribute on this directory entry.
+        A method to set the hidden attribute on this directory entry.
 
         Parameters:
-         attr - The attribute to set.  Must be one of 'r' (read-only), 'h' (hidden), 's' (system), or 'a' (archive).
+         None.
         Returns:
          Nothing.
         '''
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
-        if attr == 'r':
-            self.attributes |= 0x01
-        elif attr == 'h':
-            self.attributes |= 0x02
-        elif attr == 's':
-            self.attributes |= 0x04
-        elif attr == 'a':
-            self.attributes |= 0x20
-        else:
-            raise PyFatException("Invalid flag to set_attr")
+        self.attributes |= 0x02
 
-    def clear_attr(self, attr):
+    def set_archive(self):
         '''
-        A method to clear an attribute from this directory entry.
+        A method to set the archive attribute on this directory entry.
 
         Parameters:
-         attr - The attribute to clear.  Must be one of 'r' (read-only), 'h' (hidden), 's' (system), or 'a' (archive).
+         None.
         Returns:
          Nothing.
         '''
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
-        if attr == 'r':
-            self.attributes &= ~0x01
-        elif attr == 'h':
-            self.attributes &= ~0x02
-        elif attr == 's':
-            self.attributes &= ~0x04
-        elif attr == 'a':
-            self.attributes &= ~0x20
-        else:
-            raise PyFatException("Invalid flag to clear_attr")
+        self.attributes |= 0x20
+
+    def set_system(self):
+        '''
+        A method to set the system attribute on this directory entry.
+
+        Parameters:
+         None.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This directory entry is not yet initialized")
+
+        self.attributes |= 0x04
+
+    def set_read_only(self):
+        '''
+        A method to set the read only attribute on this directory entry.
+
+        Parameters:
+         None.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This directory entry is not yet initialized")
+
+        self.attributes |= 0x01
+
+    def clear_hidden(self):
+        '''
+        A method to clear the hidden attribute on this directory entry.
+
+        Parameters:
+         None.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This directory entry is not yet initialized")
+
+        self.attributes &= ~0x02
+
+    def clear_system(self):
+        '''
+        A method to clear the system attribute on this directory entry.
+
+        Parameters:
+         None.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This directory entry is not yet initialized")
+
+        self.attributes &= ~0x04
+
+    def clear_archive(self):
+        '''
+        A method to clear the archive attribute on this directory entry.
+
+        Parameters:
+         None.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This directory entry is not yet initialized")
+
+        self.attributes &= ~0x20
+
+    def clear_read_only(self):
+        '''
+        A method to clear the read only attribute on this directory entry.
+
+        Parameters:
+         None.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This directory entry is not yet initialized")
+
+        self.attributes &= ~0x01
 
 class FAT12(object):
     '''
@@ -994,25 +1060,133 @@ class PyFat(object):
 
         # FIXME: when removing a child, we may have to shrink the parent size in the FAT
 
-    def add_attr(self, path, attr):
+    def set_hidden(self, path):
         '''
-        A method to add an attribute to a FAT entry.
+        A method to set the hidden attribute on a FAT entry.
 
         Parameters:
-         path - The path to add the attribute to.
-         attr - The attribute to add; must be one of 'a' (archive), 'r' (read-only), 's' (system), or 'h' (hidden).
+         path - The path to the FAT entry to set the hidden attribute for.
         Returns:
          Nothing.
         '''
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        if attr not in ['a', 'r', 's', 'h']:
-            raise PyFatException("This method only supports adding the 'a' (archive), 'r' (read-only), 's' (system), and 'h' (hidden) attributes")
+        child, index = self._find_record(path)
+
+        child.set_hidden()
+
+    def set_archive(self, path):
+        '''
+        A method to set the archive attribute on a FAT entry.
+
+        Parameters:
+         path - The path to the FAT entry to set the archive attribute for.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
 
         child, index = self._find_record(path)
 
-        child.set_attr(attr)
+        child.set_archive()
+
+    def set_read_only(self, path):
+        '''
+        A method to set the read only attribute on a FAT entry.
+
+        Parameters:
+         path - The path to the FAT entry to set the read only attribute for.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        child, index = self._find_record(path)
+
+        child.set_read_only()
+
+    def set_system(self, path):
+        '''
+        A method to set the system attribute on a FAT entry.
+
+        Parameters:
+         path - The path to the FAT entry to set the system attribute for.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        child, index = self._find_record(path)
+
+        child.set_system()
+
+    def clear_hidden(self, path):
+        '''
+        A method to clear the hidden attribute on a FAT entry.
+
+        Parameters:
+         path - The path to the FAT entry to clear the hidden attribute for.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        child, index = self._find_record(path)
+
+        child.clear_hidden()
+
+    def clear_archive(self, path):
+        '''
+        A method to clear the archive attribute on a FAT entry.
+
+        Parameters:
+         path - The path to the FAT entry to clear the archive attribute for.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        child, index = self._find_record(path)
+
+        child.clear_archive()
+
+    def clear_read_only(self, path):
+        '''
+        A method to clear the read only attribute on a FAT entry.
+
+        Parameters:
+         path - The path to the FAT entry to clear the read only attribute for.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        child, index = self._find_record(path)
+
+        child.clear_read_only()
+
+    def clear_system(self, path):
+        '''
+        A method to clear the system attribute on a FAT entry.
+
+        Parameters:
+         path - The path to the FAT entry to clear the system attribute for.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        child, index = self._find_record(path)
+
+        child.clear_system()
 
     def rm_attr(self, path, attr):
         '''
