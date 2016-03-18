@@ -59,3 +59,47 @@ def test_parse_onedir(tmpdir):
     subprocess.call(["mmd", "-i", str(outfile), "DIR1"])
 
     do_a_test(tmpdir, outfile, check_onedir)
+
+def test_parse_onefile_system(tmpdir):
+    indir = tmpdir.mkdir("onefilesystem")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mattrib", "+s", "-i", str(outfile), "::FOO"])
+
+    do_a_test(tmpdir, outfile, check_onefile_system)
+
+def test_parse_onefile_archive(tmpdir):
+    indir = tmpdir.mkdir("onefilearchive")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mattrib", "+a", "-i", str(outfile), "::FOO"])
+
+    do_a_test(tmpdir, outfile, check_onefile_archive)
+
+def test_parse_onefile_hidden(tmpdir):
+    indir = tmpdir.mkdir("onefilehidden")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mattrib", "+h", "-i", str(outfile), "::FOO"])
+
+    do_a_test(tmpdir, outfile, check_onefile_hidden)
+
+def test_parse_onefile_read_only(tmpdir):
+    indir = tmpdir.mkdir("onefileread_only")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mattrib", "+r", "-i", str(outfile), "::FOO"])
+
+    do_a_test(tmpdir, outfile, check_onefile_read_only)

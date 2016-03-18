@@ -96,3 +96,79 @@ def test_hybrid_rmdir(tmpdir):
         do_a_test(fat, check_nofiles)
 
         fat.close()
+
+def test_hybrid_set_system_file(tmpdir):
+    indir = tmpdir.mkdir("setsystemfile")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+
+    fat = pyfat.PyFat()
+
+    with open(str(outfile), 'rb') as fp:
+        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+
+        fat.set_system("/FOO")
+
+        do_a_test(fat, check_onefile_system)
+
+        fat.close()
+
+def test_hybrid_set_archive_file(tmpdir):
+    indir = tmpdir.mkdir("setarchivefile")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+
+    fat = pyfat.PyFat()
+
+    with open(str(outfile), 'rb') as fp:
+        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+
+        fat.set_archive("/FOO")
+
+        do_a_test(fat, check_onefile_archive)
+
+        fat.close()
+
+def test_hybrid_set_hidden_file(tmpdir):
+    indir = tmpdir.mkdir("sethiddenfile")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+
+    fat = pyfat.PyFat()
+
+    with open(str(outfile), 'rb') as fp:
+        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+
+        fat.set_hidden("/FOO")
+
+        do_a_test(fat, check_onefile_hidden)
+
+        fat.close()
+
+def test_hybrid_set_read_only_file(tmpdir):
+    indir = tmpdir.mkdir("setread_onlyfile")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+
+    fat = pyfat.PyFat()
+
+    with open(str(outfile), 'rb') as fp:
+        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+
+        fat.set_read_only("/FOO")
+
+        do_a_test(fat, check_onefile_read_only)
+
+        fat.close()

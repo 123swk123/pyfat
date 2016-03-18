@@ -87,3 +87,91 @@ def check_onedir(fat, filesize):
     assert(fat.fat.fat[2] == 0xfff)
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
+
+def check_onefile_system(fat, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 1)
+    internal_check_directory_entry(fat.root.children[0], "FOO     ", "   ", 2, 4, 0x24)
+    assert(len(fat.root.children[0].children) == 0)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xf0)
+    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[2] == 0xfff)
+    for i in range(3, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)
+
+    fout = StringIO.StringIO()
+    fat.get_and_write_file("/FOO", fout)
+    assert(fout.getvalue() == "foo\n")
+
+def check_onefile_archive(fat, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 1)
+    internal_check_directory_entry(fat.root.children[0], "FOO     ", "   ", 2, 4, 0x20)
+    assert(len(fat.root.children[0].children) == 0)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xf0)
+    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[2] == 0xfff)
+    for i in range(3, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)
+
+    fout = StringIO.StringIO()
+    fat.get_and_write_file("/FOO", fout)
+    assert(fout.getvalue() == "foo\n")
+
+def check_onefile_hidden(fat, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 1)
+    internal_check_directory_entry(fat.root.children[0], "FOO     ", "   ", 2, 4, 0x22)
+    assert(len(fat.root.children[0].children) == 0)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xf0)
+    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[2] == 0xfff)
+    for i in range(3, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)
+
+    fout = StringIO.StringIO()
+    fat.get_and_write_file("/FOO", fout)
+    assert(fout.getvalue() == "foo\n")
+
+def check_onefile_read_only(fat, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 1)
+    internal_check_directory_entry(fat.root.children[0], "FOO     ", "   ", 2, 4, 0x21)
+    assert(len(fat.root.children[0].children) == 0)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xf0)
+    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[2] == 0xfff)
+    for i in range(3, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)
+
+    fout = StringIO.StringIO()
+    fat.get_and_write_file("/FOO", fout)
+    assert(fout.getvalue() == "foo\n")
