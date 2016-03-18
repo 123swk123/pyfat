@@ -33,7 +33,7 @@ class PyFatException(Exception):
     def __init__(self, msg):
         Exception.__init__(self, msg)
 
-def hexdump(st):
+def hexdump(instring):
     '''
     A utility function to print a string in hex.
 
@@ -42,7 +42,7 @@ def hexdump(st):
     Returns:
      A string containing the hexadecimal representation of the input string.
     '''
-    return ':'.join(x.encode('hex') for x in st)
+    return ':'.join(x.encode('hex') for x in instring)
 
 def ceiling_div(numer, denom):
     '''
@@ -122,8 +122,8 @@ class FATDirectoryEntry(object):
         if len(extension) > 3:
             raise PyFatException("Extension is too long (must be 3 or shorter)")
 
-        tm = time.time()
-        local = time.localtime(tm)
+        time_since_epoch = time.time()
+        local = time.localtime(time_since_epoch)
         year = local.tm_year - 1980
         month = local.tm_mon
         day = local.tm_mday
