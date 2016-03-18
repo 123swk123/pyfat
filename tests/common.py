@@ -219,3 +219,26 @@ def check_onefile_no_attr(fat, tmpdir, filesize):
     foo = tmpdir.join("foo")
     fat.get_and_write_file("/FOO", str(foo))
     assert(foo.read() == "foo\n")
+
+def check_manyfiles(fat, tmpdir, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 17)
+    for i in range(1, 18):
+        num = "{:0>2}".format(str(i))
+        name = "{:<8}".format("FILE" + num)
+        cluster = i + 1
+        internal_check_directory_entry(fat.root.children[i-1], name, "   ", cluster, 7, 0x20)
+        assert(len(fat.root.children[i-1].children) == 0)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xf0)
+    assert(fat.fat.fat[1] == 0xff)
+    for i in range(2, 19):
+        assert(fat.fat.fat[i] == 0xfff)
+    for i in range(19, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)

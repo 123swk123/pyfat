@@ -134,3 +134,16 @@ def test_parse_onefile_no_attr(tmpdir):
     subprocess.call(["mattrib", "-a", "-i", str(outfile), "::FOO"])
 
     do_a_test(tmpdir, outfile, check_onefile_no_attr)
+
+def test_parse_manyfiles(tmpdir):
+    indir = tmpdir.mkdir("manyfiles")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    for i in range(1, 18):
+        num = "{:0>2}".format(str(i))
+        numfile = os.path.join(str(indir), "file"+num)
+        with open(numfile, "wb") as outfp:
+            outfp.write("file" + num + "\n")
+        subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), numfile, "::FILE"+num])
+
+    do_a_test(tmpdir, outfile, check_manyfiles)
