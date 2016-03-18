@@ -105,7 +105,7 @@ def test_parse_onefile_read_only(tmpdir):
     do_a_test(tmpdir, outfile, check_onefile_read_only)
 
 def test_parse_onefile_all_attr(tmpdir):
-    indir = tmpdir.mkdir("onefileread_only")
+    indir = tmpdir.mkdir("onefileallattr")
     outfile = str(indir) + ".img"
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
     with open(os.path.join(str(indir), "foo"), "wb") as outfp:
@@ -117,3 +117,17 @@ def test_parse_onefile_all_attr(tmpdir):
     subprocess.call(["mattrib", "+a", "-i", str(outfile), "::FOO"])
 
     do_a_test(tmpdir, outfile, check_onefile_all_attr)
+
+def test_parse_onefile_no_attr(tmpdir):
+    indir = tmpdir.mkdir("onefilenoattr")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mattrib", "-r", "-i", str(outfile), "::FOO"])
+    subprocess.call(["mattrib", "-h", "-i", str(outfile), "::FOO"])
+    subprocess.call(["mattrib", "-s", "-i", str(outfile), "::FOO"])
+    subprocess.call(["mattrib", "-a", "-i", str(outfile), "::FOO"])
+
+    do_a_test(tmpdir, outfile, check_onefile_no_attr)

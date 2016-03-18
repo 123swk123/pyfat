@@ -194,3 +194,25 @@ def test_hybrid_set_all_attr_file(tmpdir):
         do_a_test(fat, check_onefile_all_attr)
 
         fat.close()
+
+def test_hybrid_set_no_attr_file(tmpdir):
+    indir = tmpdir.mkdir("setnoattrfile")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+
+    fat = pyfat.PyFat()
+
+    with open(str(outfile), 'rb') as fp:
+        fat.open(fp, os.fstat(fp.fileno()).st_size / 1024)
+
+        fat.clear_read_only("/FOO")
+        fat.clear_archive("/FOO")
+        fat.clear_hidden("/FOO")
+        fat.clear_system("/FOO")
+
+        do_a_test(fat, check_onefile_no_attr)
+
+        fat.close()

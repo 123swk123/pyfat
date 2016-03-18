@@ -136,3 +136,16 @@ def test_new_onefile_all_attr():
     fat.set_archive("/FOO")
 
     do_a_test(fat, check_onefile_all_attr)
+
+def test_new_onefile_no_attr():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    mystr = "foo\n"
+    fat.add_fp("/FOO", StringIO.StringIO(mystr), len(mystr))
+    fat.clear_read_only("/FOO")
+    fat.clear_hidden("/FOO")
+    fat.clear_system("/FOO")
+    fat.clear_archive("/FOO")
+
+    do_a_test(fat, check_onefile_no_attr)
