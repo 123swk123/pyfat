@@ -265,7 +265,7 @@ class FAT12(object):
 
         return physical_clusters
 
-    def add_file(self, length):
+    def add_entry(self, length):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
 
@@ -294,26 +294,6 @@ class FAT12(object):
 
         # Set the last cluster
         self.fat[last] = 0xfff
-
-        return first_cluster
-
-    def add_dir(self):
-        # FIXME: combine this with add_file above
-        if not self.initialized:
-            raise Exception("This object is not yet initialized")
-
-        first_cluster = None
-
-        curr = 2
-        while curr < len(self.fat) and first_cluster is None:
-            if self.fat[curr] == 0x0:
-                first_cluster = curr
-                self.fat[curr] = 0xfff
-
-            curr += 1
-
-        if first_cluster is None:
-            raise Exception("No space left on device")
 
         return first_cluster
 
@@ -621,7 +601,7 @@ class PyFat(object):
         if len(ext) > 0 and ext[0] == '.':
             ext = ext[1:]
 
-        first_cluster = self.fat.add_file(length)
+        first_cluster = self.fat.add_entry(length)
 
         child = FATDirectoryEntry()
         child.new_file(infp, length, parent, name, ext, first_cluster)
@@ -638,7 +618,7 @@ class PyFat(object):
 
         name,ext = os.path.splitext(filename)
 
-        first_cluster = self.fat.add_dir()
+        first_cluster = self.fat.add_entry(512)
 
         child = FATDirectoryEntry()
         child.new_dir(parent, name, ext, first_cluster)
