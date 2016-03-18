@@ -637,11 +637,37 @@ class PyFat(object):
 
     # FIXME: add the ability to remove directories
 
+    def rm_dir(self, path):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        child,index = self._find_record(path)
+
+        if not child.is_dir():
+            raise Exception("Cannot remove file; try rm_file instead")
+
+        if len(child.children) != 2:
+            # If there are more than 2 entries in the directory (. and ..),
+            # then we can't remove
+            raise Exception("Cannot remove non-empty directory")
+
+        if child.parent is None:
+            raise Exception("Cannot remove the root entry")
+
+        self.fat.remove_entry(child.first_logical_cluster)
+
+        child.parent.remove_child(child.filename, child.extension)
+
+        # FIXME: when removing a child, we may have to shrink the parent size in the FAT
+
     def rm_file(self, path):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
 
         child,index = self._find_record(path)
+
+        if child.is_dir():
+            raise Exception("Cannot remove directory; try rm_dir instead")
 
         self.fat.remove_entry(child.first_logical_cluster)
 

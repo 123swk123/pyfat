@@ -74,3 +74,12 @@ def test_new_onedir():
     fat.add_dir("/DIR1")
 
     do_a_test(fat, check_onedir)
+
+def test_new_rmdir():
+    fat = pyfat.PyFat()
+    fat.new()
+
+    fat.add_dir("/DIR1")
+    fat.rm_dir("/DIR1")
+
+    do_a_test(fat, check_nofiles)
