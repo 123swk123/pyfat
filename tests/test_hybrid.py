@@ -33,9 +33,10 @@ def test_hybrid_rmfile(tmpdir):
     indir = tmpdir.mkdir("nofiles")
     outfile = str(indir) + ".img"
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
-    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
         outfp.write("foo\n")
-    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::FOO"])
 
     fat = pyfat.PyFat()
 
@@ -100,9 +101,10 @@ def test_hybrid_set_system_file(tmpdir):
     indir = tmpdir.mkdir("setsystemfile")
     outfile = str(indir) + ".img"
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
-    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
         outfp.write("foo\n")
-    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::FOO"])
 
     fat = pyfat.PyFat()
 
@@ -118,9 +120,10 @@ def test_hybrid_set_archive_file(tmpdir):
     indir = tmpdir.mkdir("setarchivefile")
     outfile = str(indir) + ".img"
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
-    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
         outfp.write("foo\n")
-    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::FOO"])
 
     fat = pyfat.PyFat()
 
@@ -136,9 +139,10 @@ def test_hybrid_set_hidden_file(tmpdir):
     indir = tmpdir.mkdir("sethiddenfile")
     outfile = str(indir) + ".img"
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
-    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
         outfp.write("foo\n")
-    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::FOO"])
 
     fat = pyfat.PyFat()
 
@@ -154,9 +158,10 @@ def test_hybrid_set_read_only_file(tmpdir):
     indir = tmpdir.mkdir("setread_onlyfile")
     outfile = str(indir) + ".img"
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
-    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
         outfp.write("foo\n")
-    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::FOO"])
 
     fat = pyfat.PyFat()
 
@@ -172,9 +177,10 @@ def test_hybrid_set_all_attr_file(tmpdir):
     indir = tmpdir.mkdir("setallattrfile")
     outfile = str(indir) + ".img"
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
-    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
         outfp.write("foo\n")
-    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::FOO"])
 
     fat = pyfat.PyFat()
 
@@ -193,9 +199,10 @@ def test_hybrid_set_no_attr_file(tmpdir):
     indir = tmpdir.mkdir("setnoattrfile")
     outfile = str(indir) + ".img"
     subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
-    with open(os.path.join(str(indir), "foo"), "wb") as outfp:
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
         outfp.write("foo\n")
-    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), "foo", "::FOO"])
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::FOO"])
 
     fat = pyfat.PyFat()
 
