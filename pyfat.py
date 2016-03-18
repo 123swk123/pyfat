@@ -298,6 +298,7 @@ class FAT12(object):
         return first_cluster
 
     def add_dir(self):
+        # FIXME: combine this with add_file above
         if not self.initialized:
             raise Exception("This object is not yet initialized")
 
@@ -315,6 +316,21 @@ class FAT12(object):
             raise Exception("No space left on device")
 
         return first_cluster
+
+    def remove_entry(self, first_logical_cluster):
+        if not self.initialized:
+            raise Exception("This object is not yet initialized")
+
+        curr = first_logical_cluster
+        while True:
+            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+                # This is the end!
+                self.fat[curr] = 0
+                break
+
+            nextcluster = self.fat[curr]
+            self.fat[curr] = 0
+            curr = nextcluster
 
     def record(self):
         if not self.initialized:
@@ -490,7 +506,10 @@ class PyFat(object):
             child = children[index]
             index += 1
 
-            if child.filename.rstrip() != currpath:
+            fullname = child.filename.rstrip()
+            if len(child.extension.rstrip()) > 0:
+                fullname += "." + child.extension.rstrip()
+            if fullname != currpath:
                 continue
 
             if splitindex == len(splitpath):
@@ -642,13 +661,12 @@ class PyFat(object):
         if not self.initialized:
             raise Exception("This object is not yet initialized")
 
-        filename,parent = self._name_and_parent_from_path(path)
+        child,index = self._find_record(path)
 
-        name,ext = os.path.splitext(filename)
+        self.fat.remove_entry(child.first_logical_cluster)
 
-        parent.remove_child(name, ext[1:])
+        child.parent.remove_child(child.filename, child.extension)
 
-        # FIXME: we need to remove this entries FAT entry
         # FIXME: when removing a child, we may have to shrink the parent size in the FAT
 
     def write(self, outfp):

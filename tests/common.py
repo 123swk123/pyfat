@@ -40,6 +40,8 @@ def check_nofiles(fat, filesize):
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
     assert(fat.fat.fat[0] == 0xf0)
     assert(fat.fat.fat[1] == 0xff)
+    for i in range(2, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)
 
 def check_onefile(fat, filesize):
     assert(filesize == 1474560)
