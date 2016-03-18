@@ -20,7 +20,6 @@ import os
 import time
 
 # FIXME: document all methods
-# FIXME: add tests
 # FIXME: add support for FAT16
 # FIXME: add support for FAT32
 
