@@ -311,3 +311,30 @@ def test_hybrid_manydirs_subdir(tmpdir):
     do_a_test(fat, tmpdir, check_manydirs_subdir)
 
     fat.close()
+
+def test_hybrid_manyfiles2_subdir(tmpdir):
+    indir = tmpdir.mkdir("manyfiles2subdir")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    subprocess.call(["mmd", "-i", str(outfile), "DIR1"])
+    for i in range(1, 9):
+        num = "{:0>2}".format(str(i))
+        numfile = os.path.join(str(indir), "file"+num)
+        with open(numfile, "wb") as outfp:
+            outfp.write("file" + num + "\n")
+        subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), numfile, "::DIR1/FILE"+num])
+
+    fat = pyfat.PyFat()
+
+    fat.open(outfile)
+
+    for i in range(9, 32):
+        num = "{:0>2}".format(str(i))
+        numfile = os.path.join(str(indir), "file"+num)
+        with open(numfile, "wb") as outfp:
+            outfp.write("file" + num + "\n")
+        fat.add_file("/DIR1/FILE" + num, numfile)
+
+    do_a_test(fat, tmpdir, check_manyfiles2_subdir)
+
+    fat.close()
