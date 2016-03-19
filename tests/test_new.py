@@ -207,3 +207,31 @@ def test_new_manyfiles_subdir(tmpdir):
     do_a_test(fat, tmpdir, check_manyfiles_subdir)
 
     fat.close()
+
+def test_new_manydirs(tmpdir):
+    fat = pyfat.PyFat()
+
+    fat.new()
+
+    for i in range(1, 18):
+        num = "{:0>2}".format(str(i))
+        fat.add_dir("/DIR"+num)
+
+    do_a_test(fat, tmpdir, check_manydirs)
+
+    fat.close()
+
+def test_new_manyfiles_subdir(tmpdir):
+    fat = pyfat.PyFat()
+
+    fat.new()
+
+    fat.add_dir("/DIR1")
+
+    for i in range(1, 18):
+        num = "{:0>2}".format(str(i))
+        fat.add_dir("/DIR1/DIR" + num)
+
+    do_a_test(fat, tmpdir, check_manydirs_subdir)
+
+    fat.close()
