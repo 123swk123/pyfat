@@ -1307,12 +1307,12 @@ class PyFat(object):
                 currdir, physical_clusters = dirs.popleft()
 
                 cluster_iter = iter(physical_clusters)
-                outfp.seek(cluster_iter.next() * 512)
+                outfp.seek(cluster_iter.next() * self.bytes_per_cluster)
                 cluster_offset = 0
                 for child in currdir.children:
                     if cluster_offset + 32 > 512:
                         cluster_offset = 0
-                        outfp.seek(cluster_iter.next() * 512)
+                        outfp.seek(cluster_iter.next() * self.bytes_per_cluster)
 
                     outfp.write(child.record())
                     cluster_offset += 32
@@ -1341,12 +1341,12 @@ class PyFat(object):
                         left = child.file_size
                         index = 0
                         while index < len(orig_cluster_list) and left > 0:
-                            thisread = 512
+                            thisread = self.bytes_per_cluster
                             if left < thisread:
                                 thisread = left
 
-                            child.data_fp.seek(orig_cluster_list[index] * 512)
-                            outfp.seek(new_cluster_list[index] * 512)
+                            child.data_fp.seek(orig_cluster_list[index] * self.bytes_per_cluster)
+                            outfp.seek(new_cluster_list[index] * self.bytes_per_cluster)
                             outfp.write(child.data_fp.read(thisread))
 
                             left -= thisread
