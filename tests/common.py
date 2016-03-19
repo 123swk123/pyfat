@@ -256,12 +256,11 @@ def check_manyfiles_subdir(fat, tmpdir, filesize):
     internal_check_directory_entry(dir1, "DIR1    ", "   ", 2, 0, 0x10)
 
     clusters = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20]
-    for i in range(2, 19):
-        num = "{:0>2}".format(str(i-1))
+    for i in range(1, 18):
+        num = "{:0>2}".format(str(i))
         name = "{:<8}".format("FILE" + num)
-        cluster = i + 1
-        internal_check_directory_entry(dir1.children[i], name, "   ", clusters[i-2], 7, 0x20)
-        assert(len(dir1.children[i].children) == 0)
+        internal_check_directory_entry(dir1.children[i+1], name, "   ", clusters[i-1], 7, 0x20)
+        assert(len(dir1.children[i+1].children) == 0)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
     assert(fat.fat.fat[0] == 0xff0)
@@ -308,12 +307,11 @@ def check_manydirs_subdir(fat, tmpdir, filesize):
     internal_check_directory_entry(dir1, "DIR1    ", "   ", 2, 0, 0x10)
 
     clusters = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20]
-    for i in range(2, 19):
-        num = "{:0>2}".format(str(i-1))
+    for i in range(1, 18):
+        num = "{:0>2}".format(str(i))
         name = "{:<8}".format("DIR" + num)
-        cluster = i + 1
-        internal_check_directory_entry(dir1.children[i], name, "   ", clusters[i-2], 0, 0x10)
-        assert(len(dir1.children[i].children) == 2)
+        internal_check_directory_entry(dir1.children[i+1], name, "   ", clusters[i-1], 0, 0x10)
+        assert(len(dir1.children[i+1].children) == 2)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
     assert(fat.fat.fat[0] == 0xff0)
@@ -344,3 +342,34 @@ def check_multiple_cluster_file(fat, tmpdir, filesize):
     foo = tmpdir.join("commonfoo")
     fat.get_and_write_file("/FOO", str(foo))
     assert(foo.read() == "0"*513)
+
+def check_manyfiles2_subdir(fat, tmpdir, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 1)
+
+    dir1 = fat.root.children[0]
+    internal_check_directory_entry(dir1, "DIR1    ", "   ", 2, 0, 0x10)
+
+    clusters = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34]
+    for i in range(1, 32):
+        num = "{:0>2}".format(str(i))
+        name = "{:<8}".format("FILE" + num)
+        internal_check_directory_entry(dir1.children[i+1], name, "   ", clusters[i-1], 7, 0x20)
+        assert(len(dir1.children[i+1].children) == 0)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
+    assert(fat.fat.fat[2] == 0x12)
+    for i in range(3, 17):
+        assert(fat.fat.fat[i] == 0xfff)
+    assert(fat.fat.fat[18] == 0x23)
+    for i in range(19, 35):
+        assert(fat.fat.fat[i] == 0xfff)
+    for i in range(36, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)

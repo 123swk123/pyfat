@@ -1364,7 +1364,9 @@ class PyFat(object):
                             index += 1
 
             # Finally, truncate the file out to its final size
-            outfp.write('\x00'*(self.size_in_kb * 1024 - outfp.tell()))
+            outfp.truncate(self.size_in_kb * 1024)
+            outfp.seek(-1, os.SEEK_END)
+            outfp.write("\x00")
 
     def close(self):
         '''
