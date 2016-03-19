@@ -38,8 +38,8 @@ def check_nofiles(fat, tmpdir, filesize):
     assert(fat.root.children == [])
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
-    assert(fat.fat.fat[0] == 0xf0)
-    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
     for i in range(2, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
@@ -55,8 +55,8 @@ def check_onefile(fat, tmpdir, filesize):
     assert(len(fat.root.children[0].children) == 0)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
-    assert(fat.fat.fat[0] == 0xf0)
-    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
     assert(fat.fat.fat[2] == 0xfff)
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
@@ -82,8 +82,8 @@ def check_onedir(fat, tmpdir, filesize):
     internal_check_directory_entry(dir1.children[1], "..      ", "   ", 0, 0, 0x10)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
-    assert(fat.fat.fat[0] == 0xf0)
-    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
     assert(fat.fat.fat[2] == 0xfff)
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
@@ -100,8 +100,8 @@ def check_onefile_system(fat, tmpdir, filesize):
     assert(len(fat.root.children[0].children) == 0)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
-    assert(fat.fat.fat[0] == 0xf0)
-    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
     assert(fat.fat.fat[2] == 0xfff)
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
@@ -122,8 +122,8 @@ def check_onefile_archive(fat, tmpdir, filesize):
     assert(len(fat.root.children[0].children) == 0)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
-    assert(fat.fat.fat[0] == 0xf0)
-    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
     assert(fat.fat.fat[2] == 0xfff)
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
@@ -144,8 +144,8 @@ def check_onefile_hidden(fat, tmpdir, filesize):
     assert(len(fat.root.children[0].children) == 0)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
-    assert(fat.fat.fat[0] == 0xf0)
-    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
     assert(fat.fat.fat[2] == 0xfff)
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
@@ -166,8 +166,8 @@ def check_onefile_read_only(fat, tmpdir, filesize):
     assert(len(fat.root.children[0].children) == 0)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
-    assert(fat.fat.fat[0] == 0xf0)
-    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
     assert(fat.fat.fat[2] == 0xfff)
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
@@ -188,8 +188,8 @@ def check_onefile_all_attr(fat, tmpdir, filesize):
     assert(len(fat.root.children[0].children) == 0)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
-    assert(fat.fat.fat[0] == 0xf0)
-    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
     assert(fat.fat.fat[2] == 0xfff)
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
@@ -210,8 +210,8 @@ def check_onefile_no_attr(fat, tmpdir, filesize):
     assert(len(fat.root.children[0].children) == 0)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
-    assert(fat.fat.fat[0] == 0xf0)
-    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
     assert(fat.fat.fat[2] == 0xfff)
     for i in range(3, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
@@ -236,9 +236,39 @@ def check_manyfiles(fat, tmpdir, filesize):
         assert(len(fat.root.children[i-1].children) == 0)
 
     assert(len(fat.fat.fat) == 512 * 9 / 1.5)
-    assert(fat.fat.fat[0] == 0xf0)
-    assert(fat.fat.fat[1] == 0xff)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
     for i in range(2, 19):
         assert(fat.fat.fat[i] == 0xfff)
     for i in range(19, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)
+
+def check_manyfiles_subdir(fat, tmpdir, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 1)
+
+    dir1 = fat.root.children[0]
+    internal_check_directory_entry(dir1, "DIR1    ", "   ", 2, 0, 0x10)
+
+    print len(dir1.children)
+    clusters = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20]
+    for i in range(2, 19):
+        num = "{:0>2}".format(str(i-1))
+        name = "{:<8}".format("FILE" + num)
+        cluster = i + 1
+        internal_check_directory_entry(dir1.children[i], name, "   ", clusters[i-2], 7, 0x20)
+        assert(len(dir1.children[i].children) == 0)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
+    assert(fat.fat.fat[2] == 0x12)
+    for i in range(3, 21):
+        assert(fat.fat.fat[i] == 0xfff)
+    for i in range(21, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)

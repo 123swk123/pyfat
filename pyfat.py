@@ -478,8 +478,8 @@ class FAT12(object):
         total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) / bytes per entry (1.5)
 
         self.fat = [0x0]*int(total_entries)
-        self.fat[0] = 0xf0
-        self.fat[1] = 0xff
+        self.fat[0] = 0xff0
+        self.fat[1] = 0xfff
 
         curr = 2
         while curr < total_entries:
@@ -513,8 +513,8 @@ class FAT12(object):
         total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) / bytes per entry (1.5)
 
         self.fat = [0x0]*int(total_entries)
-        self.fat[0] = 0xf0
-        self.fat[1] = 0xff
+        self.fat[0] = 0xff0
+        self.fat[1] = 0xfff
 
         self.initialized = True
 
@@ -978,6 +978,8 @@ class PyFat(object):
 
         parent.add_child(child)
 
+        #if len(parent.children) > 0 and (len(parent.children) % (512/32)) == 0:
+            # Here, we need to add another
         # FIXME: when adding a new file, we may have to expand the parent size and the size in the FAT
 
     def add_dir(self, path):
