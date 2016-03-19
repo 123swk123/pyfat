@@ -182,3 +182,14 @@ def test_parse_manydirs_subdir(tmpdir):
         subprocess.call(["mmd", "-i", str(outfile), "DIR1/DIR"+num])
 
     do_a_test(tmpdir, outfile, check_manydirs_subdir)
+
+def test_parse_multiple_cluster_file(tmpdir):
+    indir = tmpdir.mkdir("multipleclusterfile")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
+        outfp.write("0"*513)
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::FOO"])
+
+    do_a_test(tmpdir, outfile, check_multiple_cluster_file)

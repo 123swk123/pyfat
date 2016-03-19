@@ -323,3 +323,24 @@ def check_manydirs_subdir(fat, tmpdir, filesize):
         assert(fat.fat.fat[i] == 0xfff)
     for i in range(21, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
+
+def check_multiple_cluster_file(fat, tmpdir, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 1)
+    internal_check_directory_entry(fat.root.children[0], "FOO     ", "   ", 2, 513, 0x20)
+    assert(len(fat.root.children[0].children) == 0)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
+    assert(fat.fat.fat[2] == 0x3)
+    for i in range(4, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)
+
+    foo = tmpdir.join("commonfoo")
+    fat.get_and_write_file("/FOO", str(foo))
+    assert(foo.read() == "0"*513)

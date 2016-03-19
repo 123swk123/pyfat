@@ -235,3 +235,17 @@ def test_new_manyfiles_subdir(tmpdir):
     do_a_test(fat, tmpdir, check_manydirs_subdir)
 
     fat.close()
+
+def test_new_multiple_cluster_file(tmpdir):
+    fat = pyfat.PyFat()
+
+    fat.new()
+
+    foo = tmpdir.join("foo")
+    foo.write("0"*513)
+
+    fat.add_file("/FOO", str(foo))
+
+    do_a_test(fat, tmpdir, check_multiple_cluster_file)
+
+    fat.close()

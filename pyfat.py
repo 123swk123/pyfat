@@ -907,7 +907,7 @@ class PyFat(object):
                 # original is the same as the new.
                 orig_cluster_list = new_cluster_list
             elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
-                orig_cluster_list = range(0, child.file_size, 512)
+                orig_cluster_list = range(0, ceiling_div(child.file_size, 512))
 
             left = child.file_size
             index = 0
@@ -1347,7 +1347,7 @@ class PyFat(object):
                             # list and the original is the same as the new.
                             orig_cluster_list = new_cluster_list
                         elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
-                            orig_cluster_list = range(0, child.file_size, 512)
+                            orig_cluster_list = range(0, ceiling_div(child.file_size, 512))
 
                         left = child.file_size
                         index = 0
