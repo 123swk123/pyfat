@@ -270,3 +270,44 @@ def test_hybrid_manyfiles_subdir(tmpdir):
     do_a_test(fat, tmpdir, check_manyfiles_subdir)
 
     fat.close()
+
+def test_hybrid_manydirs(tmpdir):
+    indir = tmpdir.mkdir("manydirs")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    for i in range(1, 9):
+        num = "{:0>2}".format(str(i))
+        subprocess.call(["mmd", "-i", str(outfile), "DIR"+num])
+
+    fat = pyfat.PyFat()
+
+    fat.open(outfile)
+
+    for i in range(9, 18):
+        num = "{:0>2}".format(str(i))
+        fat.add_dir("/DIR"+num)
+
+    do_a_test(fat, tmpdir, check_manydirs)
+
+    fat.close()
+
+def test_hybrid_manydirs_subdir(tmpdir):
+    indir = tmpdir.mkdir("manydirssubdir")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    subprocess.call(["mmd", "-i", str(outfile), "DIR1"])
+    for i in range(1, 9):
+        num = "{:0>2}".format(str(i))
+        subprocess.call(["mmd", "-i", str(outfile), "DIR1/DIR"+num])
+
+    fat = pyfat.PyFat()
+
+    fat.open(outfile)
+
+    for i in range(9, 18):
+        num = "{:0>2}".format(str(i))
+        fat.add_dir("/DIR1/DIR" + num)
+
+    do_a_test(fat, tmpdir, check_manydirs_subdir)
+
+    fat.close()
