@@ -181,7 +181,6 @@ def test_new_manyfiles(tmpdir):
         numfile = os.path.join(str(indir), "file"+num)
         with open(numfile, "wb") as outfp:
             outfp.write("file" + num + "\n")
-        print "adding " + str(i)
         fat.add_file("/FILE" + num, numfile)
 
     do_a_test(fat, tmpdir, check_manyfiles)

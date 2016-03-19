@@ -765,7 +765,7 @@ class PyFat(object):
         self.size_in_kb = size_in_kb
 
         # The following determines whether this is FAT12, FAT16, or FAT32
-        root_dir_sectors = ((self.max_root_dir_entries * 32) + (self.bytes_per_sector - 1)) / self.bytes_per_sector
+        self.root_dir_sectors = ((self.max_root_dir_entries * 32) + (self.bytes_per_sector - 1)) / self.bytes_per_sector
         if self.sectors_per_fat != 0:
             fat_size = self.sectors_per_fat
         else:
@@ -776,7 +776,7 @@ class PyFat(object):
         else:
             total_sectors = self.total_sector_count_32
 
-        data_sec = total_sectors - (self.reserved_sectors + (self.num_fats * fat_size) + root_dir_sectors)
+        data_sec = total_sectors - (self.reserved_sectors + (self.num_fats * fat_size) + self.root_dir_sectors)
         count_of_clusters = data_sec / self.sectors_per_cluster
 
         if count_of_clusters < 4085:
@@ -796,6 +796,8 @@ class PyFat(object):
             if first_fat != second_fat:
                 raise PyFatException("The first FAT and second FAT do not agree; corrupt FAT filesystem")
 
+        self.bytes_per_cluster = self.bytes_per_sector * self.sectors_per_cluster
+
         self.fat = FAT12()
         self.fat.parse(first_fat)
 
@@ -803,7 +805,7 @@ class PyFat(object):
         self.root = FATDirectoryEntry()
         self.root.parse('           \x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None, self.orig_fp)
         root_cluster_list = []
-        for i in range(19, 19+14):
+        for i in range(19, 19+self.root_dir_sectors):
             root_cluster_list.append(i)
 
         dirs = collections.deque([(self.root, root_cluster_list)])
@@ -813,8 +815,8 @@ class PyFat(object):
             # Read all of the data for this directory
             data = ''
             for cluster in cluster_list:
-                self.orig_fp.seek(cluster * 512)
-                data += self.orig_fp.read(512)
+                self.orig_fp.seek(cluster * self.bytes_per_cluster)
+                data += self.orig_fp.read(self.bytes_per_cluster)
 
             read = 0
             while read < len(data):
@@ -911,17 +913,17 @@ class PyFat(object):
                 # original is the same as the new.
                 orig_cluster_list = new_cluster_list
             elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
-                orig_cluster_list = range(0, ceiling_div(child.file_size, 512))
+                orig_cluster_list = range(0, ceiling_div(child.file_size, self.bytes_per_cluster))
 
             left = child.file_size
             index = 0
             while index < len(orig_cluster_list) and left > 0:
-                thisread = 512
+                thisread = self.bytes_per_cluster
                 if left < thisread:
                     thisread = left
 
-                child.data_fp.seek(orig_cluster_list[index] * 512)
-                outfp.seek(index * 512)
+                child.data_fp.seek(orig_cluster_list[index] * self.bytes_per_cluster)
+                outfp.seek(index * self.bytes_per_cluster)
                 outfp.write(child.data_fp.read(thisread))
 
                 left -= thisread
@@ -962,6 +964,8 @@ class PyFat(object):
         self.volume_label = "NO NAME    "
         self.fs_type = "FAT12   "
         self.boot_code = self.BOOT_CODE
+        self.bytes_per_cluster = self.bytes_per_sector * self.sectors_per_cluster
+        self.root_dir_sectors = ((self.max_root_dir_entries * 32) + (self.bytes_per_sector - 1)) / self.bytes_per_sector
 
         self.root = FATDirectoryEntry()
         self.root.new_root()
@@ -1051,7 +1055,7 @@ class PyFat(object):
 
         name, ext = os.path.splitext(filename)
 
-        first_cluster = self.fat.add_entry(512)
+        first_cluster = self.fat.add_entry(self.bytes_per_cluster)
 
         child = FATDirectoryEntry()
         child.new_dir(parent, name, ext, first_cluster)
@@ -1268,7 +1272,7 @@ class PyFat(object):
 
         with open(local_path, 'wb') as outfp:
             # First write out the boot entry
-            outfp.seek(0 * 512)
+            outfp.seek(0 * self.bytes_per_sector)
             outfp.write(struct.pack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH",
                                     self.jmp_boot, self.oem_name,
                                     self.bytes_per_sector,
@@ -1285,16 +1289,17 @@ class PyFat(object):
                                     self.boot_code, 0xaa55))
 
             # Now write out the first FAT
-            outfp.seek(1 * 512)
+            outfp.seek(1 * self.bytes_per_sector)
             outfp.write(self.fat.record())
 
-            # Now write out the second FAT
-            outfp.seek(10 * 512)
-            outfp.write(self.fat.record())
+            if self.num_fats == 2:
+                # Now write out the second FAT
+                outfp.seek((1+self.sectors_per_fat) * self.bytes_per_sector)
+                outfp.write(self.fat.record())
 
             # Now write out the directory entries
             root_cluster_list = []
-            for i in range(19, 19+14):
+            for i in range(19, 19+self.root_dir_sectors):
                 root_cluster_list.append(i)
 
             dirs = collections.deque([(self.root, root_cluster_list)])
