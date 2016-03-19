@@ -282,3 +282,20 @@ def test_new_rmfile_large(tmpdir):
     fat.rm_file("/FOO")
 
     do_a_test(fat, tmpdir, check_nofiles)
+
+    fat.close()
+
+def test_new_deep_subdir(tmpdir):
+    fat = pyfat.PyFat()
+    fat.new()
+
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat.add_dir("/DIR1")
+    fat.add_dir("/DIR1/DIR2")
+    fat.add_file("/DIR1/DIR2/FOO", str(foo))
+
+    do_a_test(fat, tmpdir, check_deep_subdir)
+
+    fat.close()

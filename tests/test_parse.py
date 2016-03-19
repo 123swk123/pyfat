@@ -207,3 +207,16 @@ def test_parse_manyfiles2_subdir(tmpdir):
         subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), numfile, "::DIR1/FILE"+num])
 
     do_a_test(tmpdir, outfile, check_manyfiles2_subdir)
+
+def test_parse_deep_subdir(tmpdir):
+    indir = tmpdir.mkdir("deepsubdir")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    subprocess.call(["mmd", "-i", str(outfile), "DIR1"])
+    subprocess.call(["mmd", "-i", str(outfile), "DIR1/DIR2"])
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
+        outfp.write("foo\n")
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::DIR1/DIR2/FOO"])
+
+    do_a_test(tmpdir, outfile, check_deep_subdir)

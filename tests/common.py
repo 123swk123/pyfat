@@ -373,3 +373,31 @@ def check_manyfiles2_subdir(fat, tmpdir, filesize):
         assert(fat.fat.fat[i] == 0xfff)
     for i in range(36, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
+
+def check_deep_subdir(fat, tmpdir, filesize):
+    assert(filesize == 1474560)
+
+    internal_check_boot_sector(fat)
+
+    internal_check_root(fat.root)
+    assert(fat.root.parent is None)
+    assert(len(fat.root.children) == 1)
+    dir1 = fat.root.children[0]
+    internal_check_directory_entry(dir1, "DIR1    ", "   ", 2, 0, 0x10)
+    assert(len(dir1.children) == 3)
+    dir2 = dir1.children[2]
+    internal_check_directory_entry(dir2, "DIR2    ", "   ", 3, 0, 0x10)
+    assert(len(dir2.children) == 3)
+
+    assert(len(fat.fat.fat) == 512 * 9 / 1.5)
+    assert(fat.fat.fat[0] == 0xff0)
+    assert(fat.fat.fat[1] == 0xfff)
+    assert(fat.fat.fat[2] == 0xfff)
+    assert(fat.fat.fat[3] == 0xfff)
+    assert(fat.fat.fat[4] == 0xfff)
+    for i in range(5, int(512*9 / 1.5)):
+        assert(fat.fat.fat[i] == 0x00)
+
+    foo = tmpdir.join("foo")
+    fat.get_and_write_file("/DIR1/DIR2/FOO", str(foo))
+    assert(foo.read() == "foo\n")

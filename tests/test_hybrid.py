@@ -357,3 +357,23 @@ def test_hybrid_rmfile_large(tmpdir):
     do_a_test(fat, tmpdir, check_nofiles)
 
     fat.close()
+
+def test_hybrid_deep_subdir(tmpdir):
+    indir = tmpdir.mkdir("deepsubdir")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    subprocess.call(["mmd", "-i", str(outfile), "DIR1"])
+    subprocess.call(["mmd", "-i", str(outfile), "DIR1/DIR2"])
+
+    foo = tmpdir.join("foo")
+    foo.write("foo\n")
+
+    fat = pyfat.PyFat()
+
+    fat.open(outfile)
+
+    fat.add_file("/DIR1/DIR2/FOO", str(foo))
+
+    do_a_test(fat, tmpdir, check_deep_subdir)
+
+    fat.close()
