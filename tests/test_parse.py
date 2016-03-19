@@ -161,3 +161,24 @@ def test_parse_manyfiles_subdir(tmpdir):
         subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), numfile, "::DIR1/FILE"+num])
 
     do_a_test(tmpdir, outfile, check_manyfiles_subdir)
+
+def test_parse_manydirs(tmpdir):
+    indir = tmpdir.mkdir("manydirs")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    for i in range(1, 18):
+        num = "{:0>2}".format(str(i))
+        subprocess.call(["mmd", "-i", str(outfile), "DIR"+num])
+
+    do_a_test(tmpdir, outfile, check_manydirs)
+
+def test_parse_manydirs_subdir(tmpdir):
+    indir = tmpdir.mkdir("manydirssubdir")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    subprocess.call(["mmd", "-i", str(outfile), "DIR1"])
+    for i in range(1, 18):
+        num = "{:0>2}".format(str(i))
+        subprocess.call(["mmd", "-i", str(outfile), "DIR1/DIR"+num])
+
+    do_a_test(tmpdir, outfile, check_manydirs_subdir)
