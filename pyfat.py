@@ -1250,26 +1250,6 @@ class PyFat(object):
 
         child.clear_system()
 
-    def rm_attr(self, path, attr):
-        '''
-        A method to remove an attribute from a FAT entry.
-
-        Parameters:
-         path - The path to remove the attribute from.
-         attr - The attribute to remove; must be one of 'a' (archive), 'r' (read-only), 's' (system), or 'h' (hidden).
-        Returns:
-         Nothing.
-        '''
-        if not self.initialized:
-            raise PyFatException("This object is not yet initialized")
-
-        if attr not in ['a', 'r', 's', 'h']:
-            raise PyFatException("This method only supports adding the 'a' (archive), 'r' (read-only), 's' (system), and 'h' (hidden) attributes")
-
-        child, index = self._find_record(path)
-
-        child.clear_attr(attr)
-
     def write(self, local_path):
         '''
         A method to write this FAT filesystem out to a file.
