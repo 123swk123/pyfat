@@ -169,7 +169,26 @@ def test_new_onefile_no_attr(tmpdir):
 
     do_a_test(fat, tmpdir, check_onefile_no_attr)
 
-def test_hybrid_manyfiles_subdir(tmpdir):
+def test_new_manyfiles(tmpdir):
+    indir = tmpdir.mkdir("manyfiles")
+
+    fat = pyfat.PyFat()
+
+    fat.new()
+
+    for i in range(1, 18):
+        num = "{:0>2}".format(str(i))
+        numfile = os.path.join(str(indir), "file"+num)
+        with open(numfile, "wb") as outfp:
+            outfp.write("file" + num + "\n")
+        print "adding " + str(i)
+        fat.add_file("/FILE" + num, numfile)
+
+    do_a_test(fat, tmpdir, check_manyfiles)
+
+    fat.close()
+
+def test_new_manyfiles_subdir(tmpdir):
     indir = tmpdir.mkdir("manyfilessubdir")
 
     fat = pyfat.PyFat()
