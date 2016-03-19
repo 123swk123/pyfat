@@ -338,3 +338,22 @@ def test_hybrid_manyfiles2_subdir(tmpdir):
     do_a_test(fat, tmpdir, check_manyfiles2_subdir)
 
     fat.close()
+
+def test_hybrid_rmfile_large(tmpdir):
+    indir = tmpdir.mkdir("nofiles")
+    outfile = str(indir) + ".img"
+    subprocess.call(["mkfs.msdos", "-C", str(outfile), "1440"])
+    foofile = os.path.join(str(indir), "foo")
+    with open(foofile, "wb") as outfp:
+        outfp.write("0"*513)
+    subprocess.call(["mcopy", "-n", "-o", "-i", str(outfile), foofile, "::FOO"])
+
+    fat = pyfat.PyFat()
+
+    fat.open(outfile)
+
+    fat.rm_file("/FOO")
+
+    do_a_test(fat, tmpdir, check_nofiles)
+
+    fat.close()
