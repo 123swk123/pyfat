@@ -586,6 +586,47 @@ class FAT12(object):
 
         return first_cluster
 
+    def expand_entry(self, first_logical_cluster):
+        '''
+        A method to expand the number of clusters assigned to the entry starting
+        at the given logical cluster.
+
+        Parameters:
+         first_logical_cluster - The first logical cluster of the entry to expand.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        old_last_entry = None
+        curr = first_logical_cluster
+        while True:
+            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+                # OK, we've found the last entry for this entry.  Let's save
+                # the offset so we can come back and update it once we've found
+                # the new cluster.
+                old_last_entry = curr
+                break
+
+            curr = self.fat[curr]
+
+        if old_last_entry is None:
+            raise PyFatException("Old last entry not found!")
+
+        # Now that we have the old last entry, let's scan the entire FAT for
+        # a free cluster.
+        curr = 2
+        while curr < len(self.fat):
+            if self.fat[curr] == 0x0:
+                # OK we've found a free entry; update it to be the end, update
+                # the last entry to point to this, and get out of here.
+                self.fat[old_last_entry] = curr
+                self.fat[curr] = 0xfff
+                return
+
+        raise PyFatException("No space left on device")
+
     def remove_entry(self, first_logical_cluster):
         '''
         A method to remove a chain of clusters from the FAT.
@@ -978,9 +1019,9 @@ class PyFat(object):
 
         parent.add_child(child)
 
-        #if len(parent.children) > 0 and (len(parent.children) % (512/32)) == 0:
-            # Here, we need to add another
-        # FIXME: when adding a new file, we may have to expand the parent size and the size in the FAT
+        if len(parent.children) > 0 and (len(parent.children) % (512/32)) == 0:
+            # Here, we need to add another entry to the FAT filesystem.
+            self.fat.expand_entry(parent.first_logical_cluster)
 
     def add_dir(self, path):
         '''
@@ -1013,7 +1054,9 @@ class PyFat(object):
         dotdot.new_dotdot(parent)
         child.add_child(dotdot)
 
-        # FIXME: when adding a new directory, we may have to expand the parent size and the size in the FAT
+        if len(parent.children) > 0 and (len(parent.children) % (512/32)) == 0:
+            # Here, we need to add another entry to the FAT filesystem.
+            self.fat.expand_entry(parent.first_logical_cluster)
 
     def rm_dir(self, path):
         '''
