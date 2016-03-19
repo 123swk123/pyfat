@@ -729,17 +729,20 @@ class PyFat(object):
 
         # FIXME: check that jmp_boot is 0xeb, 0x??, 0x90
 
-        if self.bytes_per_sector != 512:
-            raise PyFatException("Expected 512 bytes per sector")
+        if self.bytes_per_sector not in [512, 1024, 2048, 4096]:
+            raise PyFatException("Expected 512, 1024, 2048, or 4096 bytes per sector")
 
-        if self.sectors_per_cluster != 1:
-            raise PyFatException("Expected 1 sector per cluster")
+        if self.sectors_per_cluster not in [1, 2, 4, 8, 16, 32, 64, 128]:
+            raise PyFatException("Expected 1, 2, 4, 8, 16, 32, 64, or 128 sector per cluster")
+
+        if self.reserved_sectors == 0:
+            raise PyFatException("Number of reserved sectors must not be 0")
 
         if self.media not in [0xf0, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff]:
             raise PyFatException("Invalid media type")
 
-        if self.num_fats != 2:
-            raise PyFatException("Expected 2 FATs")
+        if self.num_fats not in [1, 2]:
+            raise PyFatException("Expected 1 or 2 FATs")
 
         if self.max_root_dir_entries != 224:
             raise PyFatException("Expected 224 root directory entries")
@@ -784,13 +787,14 @@ class PyFat(object):
             self.fat_type = self.FAT32
 
         # Read the first FAT
-        first_fat = self.orig_fp.read(512 * 9)
+        first_fat = self.orig_fp.read(self.bytes_per_sector * self.sectors_per_fat)
 
-        # Read the second FAT
-        second_fat = self.orig_fp.read(512 * 9)
+        if self.num_fats == 2:
+            # Read the second FAT if it exists
+            second_fat = self.orig_fp.read(self.bytes_per_sector * self.sectors_per_fat)
 
-        if first_fat != second_fat:
-            raise PyFatException("The first FAT and second FAT do not agree; corrupt FAT filesystem")
+            if first_fat != second_fat:
+                raise PyFatException("The first FAT and second FAT do not agree; corrupt FAT filesystem")
 
         self.fat = FAT12()
         self.fat.parse(first_fat)
