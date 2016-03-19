@@ -168,3 +168,23 @@ def test_new_onefile_no_attr(tmpdir):
     fat.clear_archive("/FOO")
 
     do_a_test(fat, tmpdir, check_onefile_no_attr)
+
+def test_hybrid_manyfiles_subdir(tmpdir):
+    indir = tmpdir.mkdir("manyfilessubdir")
+
+    fat = pyfat.PyFat()
+
+    fat.new()
+
+    fat.add_dir("/DIR1")
+
+    for i in range(1, 18):
+        num = "{:0>2}".format(str(i))
+        numfile = os.path.join(str(indir), "file"+num)
+        with open(numfile, "wb") as outfp:
+            outfp.write("file" + num + "\n")
+        fat.add_file("/DIR1/FILE" + num, numfile)
+
+    do_a_test(fat, tmpdir, check_manyfiles_subdir)
+
+    fat.close()
