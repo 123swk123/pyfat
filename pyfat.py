@@ -297,6 +297,10 @@ class FATDirectoryEntry(object):
         if self.is_dot() or self.is_dotdot():
             raise PyFatException("Cannot add children to dot or dotdot")
 
+        if self.parent is None and len(self.children) == 224:
+            # The root entry has a fixed limit of 224 entries.
+            raise PyFatException("Too many files in the root entry (max is 224)")
+
         self.children.append(child)
 
     def remove_child(self, index):
@@ -624,6 +628,8 @@ class FAT12(object):
                 self.fat[old_last_entry] = curr
                 self.fat[curr] = 0xfff
                 return
+
+            curr += 1
 
         raise PyFatException("No space left on device")
 
@@ -1019,9 +1025,11 @@ class PyFat(object):
 
         parent.add_child(child)
 
-        if len(parent.children) > 0 and (len(parent.children) % (512/32)) == 0:
-            # Here, we need to add another entry to the FAT filesystem.
-            self.fat.expand_entry(parent.first_logical_cluster)
+        # We only try to expand directories that are not the root.
+        if parent.parent is not None:
+            if len(parent.children) > 1 and (len(parent.children) % (512/32)) == 1:
+                # Here, we need to add another entry to the FAT filesystem.
+                self.fat.expand_entry(parent.first_logical_cluster)
 
     def add_dir(self, path):
         '''
@@ -1054,9 +1062,11 @@ class PyFat(object):
         dotdot.new_dotdot(parent)
         child.add_child(dotdot)
 
-        if len(parent.children) > 0 and (len(parent.children) % (512/32)) == 0:
-            # Here, we need to add another entry to the FAT filesystem.
-            self.fat.expand_entry(parent.first_logical_cluster)
+        # We only try to expand directories that are not the root.
+        if parent.parent is not None:
+            if len(parent.children) > 1 and (len(parent.children) % (512/32)) == 1:
+                # Here, we need to add another entry to the FAT filesystem.
+                self.fat.expand_entry(parent.first_logical_cluster)
 
     def rm_dir(self, path):
         '''
