@@ -745,9 +745,6 @@ class PyFat(object):
         if self.num_fats not in [1, 2]:
             raise PyFatException("Expected 1 or 2 FATs")
 
-        if self.max_root_dir_entries != 224:
-            raise PyFatException("Expected 224 root directory entries")
-
         if self.drive_num not in [0x00, 0x80]:
             raise PyFatException("Invalid drive number")
 
@@ -806,7 +803,12 @@ class PyFat(object):
         self.root = FATDirectoryEntry()
         self.root.parse('           \x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None, self.orig_fp)
         root_cluster_list = []
-        for i in range(19, 19+self.root_dir_sectors):
+        # The first root directory sector is preceded by:
+        # BPB consisting of 1 sector
+        # First FAT consisting of self.sectors_per_fat sectors
+        # (Optional) Second FAT consisting of self.sectors_per_fat sectors
+        first_root_dir_sector = 1 + (self.num_fats * self.sectors_per_fat)
+        for i in range(first_root_dir_sector, first_root_dir_sector+self.root_dir_sectors):
             root_cluster_list.append(i)
 
         dirs = collections.deque([(self.root, root_cluster_list)])
@@ -1295,8 +1297,13 @@ class PyFat(object):
                 outfp.write(self.fat.record())
 
             # Now write out the directory entries
+            # The first root directory sector is preceded by:
+            # BPB consisting of 1 sector
+            # First FAT consisting of self.sectors_per_fat sectors
+            # (Optional) Second FAT consisting of self.sectors_per_fat sectors
+            first_root_dir_sector = 1 + (self.num_fats * self.sectors_per_fat)
             root_cluster_list = []
-            for i in range(19, 19+self.root_dir_sectors):
+            for i in range(first_root_dir_sector, first_root_dir_sector+self.root_dir_sectors):
                 root_cluster_list.append(i)
 
             dirs = collections.deque([(self.root, root_cluster_list)])
