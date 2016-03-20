@@ -855,7 +855,7 @@ class PyFat(object):
             raise PyFatException("Must be a path starting with /")
 
         if path == '/':
-            raise PyFatException("Cannot write data from the root")
+            return self.root, None
 
        # Split the path along the slashes
         splitpath = path.split('/')
@@ -1360,6 +1360,27 @@ class PyFat(object):
             outfp.truncate(self.size_in_kb * 1024)
             outfp.seek(-1, os.SEEK_END)
             outfp.write("\x00")
+
+    def list_dir(self, path):
+        '''
+        A method to list all of the children of this particular path.  Note that
+        the specified path must be a directory.
+
+        Parameters:
+         path - The fully qualified path to the record, of the form "/FOO/BAR".
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("Can only call list_dir on an already open object")
+
+        rec, index = self._find_record(path)
+
+        if not rec.is_dir():
+            raise PyIsoException("Record is not a directory!")
+
+        for child in rec.children:
+            yield child
 
     def close(self):
         '''
