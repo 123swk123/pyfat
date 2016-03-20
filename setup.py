@@ -53,4 +53,5 @@ distutils.core.setup(name='pyfat',
                      ],
                      keywords='FAT FAT12 FAT16 FAT32',
                      py_modules=['pyfat'],
+                     cmdclass={'sdist': sdist},
 )

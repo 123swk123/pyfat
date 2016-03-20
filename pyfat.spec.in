@@ -26,7 +26,8 @@ python setup.py install --root=$RPM_BUILD_ROOT --skip-build
 
 %files
 %doc COPYING
-%{python_sitelib}/pyfat
+%{python_sitelib}/pyfat.*
+%{python_sitelib}/pyfat-*.egg-info
 
 %changelog
 * Sun Mar 20 2016 Chris Lalancette <clalancette@gmail.com> - 0.1.0-1
