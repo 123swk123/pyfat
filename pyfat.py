@@ -1105,8 +1105,6 @@ class PyFat(object):
 
         child.parent.remove_child(index)
 
-        # FIXME: when removing a child, we may have to shrink the parent size in the FAT
-
     def rm_file(self, path):
         '''
         A method to remove a file from the FAT filesystem.
@@ -1127,8 +1125,6 @@ class PyFat(object):
         self.fat.remove_entry(child.first_logical_cluster)
 
         child.parent.remove_child(index)
-
-        # FIXME: when removing a child, we may have to shrink the parent size in the FAT
 
     def set_hidden(self, path):
         '''
