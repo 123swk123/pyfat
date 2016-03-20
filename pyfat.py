@@ -25,6 +25,7 @@ import time
 
 # FIXME: add support for FAT16
 # FIXME: add support for FAT32
+# FIXME: add support for editing a filesystem in-place
 
 class PyFatException(Exception):
     '''
