@@ -932,7 +932,9 @@ class PyFat(object):
                 left -= thisread
                 index += 1
 
-    def new(self, size_in_kb=1440, drive_num=0, num_fats=2, hidden_sectors=0):
+    def new(self, size_in_kb=1440, drive_num=0, num_fats=2, hidden_sectors=0,
+            media=0xf0, root_dir_entries=224, reserved_sectors=1,
+            sectors_per_cluster=1, bytes_per_sector=512):
         '''
         A method to create a new FAT filesystem.
 
@@ -954,15 +956,24 @@ class PyFat(object):
         if num_fats not in [1, 2]:
             raise PyFatException("Number of FATs must be 1 or 2")
 
+        if media not in [0xf0, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff]:
+            raise PyFatException("Invalid media type")
+
+        if bytes_per_sector not in [512, 1024, 2048, 4096]:
+            raise PyFatException("Expected 512, 1024, 2048, or 4096 bytes per sector")
+
+        if sectors_per_cluster not in [1, 2, 4, 8, 16, 32, 64, 128]:
+            raise PyFatException("Expected 1, 2, 4, 8, 16, 32, 64, or 128 sector per cluster")
+
         self.jmp_boot = '\x00\xeb\x3c\x90'
         self.oem_name = 'pyfat   '
-        self.bytes_per_sector = 512
-        self.sectors_per_cluster = 1
-        self.reserved_sectors = 1
+        self.bytes_per_sector = bytes_per_sector
+        self.sectors_per_cluster = sectors_per_cluster
+        self.reserved_sectors = reserved_sectors
         self.num_fats = num_fats
-        self.max_root_dir_entries = 224
+        self.max_root_dir_entries = root_dir_entries
         self.sector_count = 2880
-        self.media = 0xf0
+        self.media = media
         self.sectors_per_fat = 9
         self.sectors_per_track = 18
         self.num_heads = 2
