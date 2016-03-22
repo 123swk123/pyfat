@@ -932,12 +932,13 @@ class PyFat(object):
                 left -= thisread
                 index += 1
 
-    def new(self, size_in_kb=1440):
+    def new(self, size_in_kb=1440, drive_num=0, num_fats=2, hidden_sectors=0):
         '''
         A method to create a new FAT filesystem.
 
         Parameters:
          size_in_kb - The size of the filesystem in kilobytes.
+         drive_num - The drive number to use for the FAT filesystem; this must be 0x0 for floppy devices or 0x80 for hard disks
         Returns:
          Nothing.
         '''
@@ -947,21 +948,27 @@ class PyFat(object):
         if size_in_kb != 1440:
             raise PyFatException("Only size 1440 disks supported")
 
+        if drive_num not in [0x0, 0x80]:
+            raise PyFatException("")
+
+        if num_fats not in [1, 2]:
+            raise PyFatException("Number of FATs must be 1 or 2")
+
         self.jmp_boot = '\x00\xeb\x3c\x90'
         self.oem_name = 'pyfat   '
         self.bytes_per_sector = 512
         self.sectors_per_cluster = 1
         self.reserved_sectors = 1
-        self.num_fats = 2
+        self.num_fats = num_fats
         self.max_root_dir_entries = 224
         self.sector_count = 2880
         self.media = 0xf0
         self.sectors_per_fat = 9
         self.sectors_per_track = 18
         self.num_heads = 2
-        self.hidden_sectors = 0
+        self.hidden_sectors = hidden_sectors
         self.total_sector_count_32 = 0
-        self.drive_num = 0
+        self.drive_num = drive_num
         self.boot_sig = 41
         self.volume_id = 4248983325
         self.volume_label = "NO NAME    "
