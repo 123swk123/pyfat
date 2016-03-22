@@ -45,7 +45,7 @@ def hexdump(instring):
     '''
     return ':'.join(x.encode('hex') for x in instring)
 
-def ceiling_div(numer, denom):
+def _ceiling_div(numer, denom):
     '''
     A function to do ceiling division; that is, dividing numerator by denominator
     and taking the ceiling.
@@ -564,7 +564,7 @@ class FAT12(object):
             raise PyFatException("This object is not yet initialized")
 
         # Update the FAT to hold the data for the file
-        num_clusters = ceiling_div(length, 512)
+        num_clusters = _ceiling_div(length, 512)
         first_cluster = None
 
         last = None
@@ -916,7 +916,7 @@ class PyFat(object):
                 # original is the same as the new.
                 orig_cluster_list = new_cluster_list
             elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
-                orig_cluster_list = range(0, ceiling_div(child.file_size, self.bytes_per_cluster))
+                orig_cluster_list = range(0, _ceiling_div(child.file_size, self.bytes_per_cluster))
 
             left = child.file_size
             index = 0
@@ -1340,7 +1340,7 @@ class PyFat(object):
                             # list and the original is the same as the new.
                             orig_cluster_list = new_cluster_list
                         elif child.original_data_location == child.DATA_IN_EXTERNAL_FP:
-                            orig_cluster_list = range(0, ceiling_div(child.file_size, 512))
+                            orig_cluster_list = range(0, _ceiling_div(child.file_size, 512))
 
                         left = child.file_size
                         index = 0
