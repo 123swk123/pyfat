@@ -726,9 +726,13 @@ class PyFat(object):
          unused1, self.boot_sig, self.volume_id, self.volume_label,
          self.fs_type, self.boot_code, sig) = struct.unpack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH", boot_sector)
 
-        self.jmp_boot2 = struct.unpack(">L", self.jmp_boot + '\x00')
-
-        # FIXME: check that jmp_boot is 0xeb, 0x??, 0x90
+        if self.jmp_boot[0] == '\xEB':
+            if self.jmp_boot[2] != '\x90':
+                raise PyFatException("Boot code must end with 0x90")
+        elif self.jmp_boot[0] == '\xE9':
+            pass
+        else:
+            raise PyFatException("Boot code must start with 0xEB or 0xE9")
 
         if self.bytes_per_sector not in [512, 1024, 2048, 4096]:
             raise PyFatException("Expected 512, 1024, 2048, or 4096 bytes per sector")
@@ -965,7 +969,7 @@ class PyFat(object):
         if sectors_per_cluster not in [1, 2, 4, 8, 16, 32, 64, 128]:
             raise PyFatException("Expected 1, 2, 4, 8, 16, 32, 64, or 128 sector per cluster")
 
-        self.jmp_boot = '\x00\xeb\x3c\x90'
+        self.jmp_boot = '\xeb\x3c\x90'
         self.oem_name = 'pyfat   '
         self.bytes_per_sector = bytes_per_sector
         self.sectors_per_cluster = sectors_per_cluster
