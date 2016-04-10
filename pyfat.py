@@ -747,9 +747,7 @@ class PyFat(object):
          self.sectors_per_cluster, self.reserved_sectors, self.num_fats,
          self.max_root_dir_entries, self.sector_count, self.media,
          self.sectors_per_fat, self.sectors_per_track, self.num_heads,
-         self.hidden_sectors, self.total_sector_count_32, self.drive_num,
-         unused1, self.boot_sig, self.volume_id, self.volume_label,
-         self.fs_type, self.boot_code, sig) = struct.unpack("=3s8sHBHBHHBHHHLLBBBL11s8s448sH", boot_sector)
+         self.hidden_sectors, self.total_sector_count_32) = struct.unpack("=3s8sHBHBHHBHHHLL", boot_sector[:36])
 
         if self.jmp_boot[0] == '\xEB':
             if self.jmp_boot[2] != '\x90':
@@ -785,15 +783,23 @@ class PyFat(object):
 
         (self.root_dir_sectors, self.fat_type) = self._determine_fat_type()
 
-        # FIXME: this check only applies to FAT12 and FAT16 filesystems.
-        if self.drive_num not in [0x00, 0x80]:
-            raise PyFatException("Invalid drive number")
+        # Now that we know the kind of FAT, we can look at the rest of the
+        # BPB fields.
+        if self.fat_type in [self.FAT12, self.FAT16]:
+            (self.drive_num, unused1, self.boot_sig, self.volume_id,
+             self.volume_label, self.fs_type, self.boot_code,
+             sig) = struct.unpack("=BBBL11s8s448sH", boot_sector[36:])
 
-        if self.fs_type != "FAT12   ":
-            raise PyFatException("Invalid filesystem type")
+            if self.drive_num not in [0x00, 0x80]:
+                raise PyFatException("Invalid drive number")
 
-        if sig != 0xaa55:
-            raise PyFatException("Invalid signature")
+            if self.fs_type != "FAT12   ":
+                raise PyFatException("Invalid filesystem type")
+
+            if sig != 0xaa55:
+                raise PyFatException("Invalid signature")
+        else:
+            raise PyFatException("Only FAT12 and FAT16 supported right now")
 
         self.size_in_kb = size_in_kb
 
