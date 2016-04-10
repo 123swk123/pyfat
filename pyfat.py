@@ -464,7 +464,7 @@ class FAT12(object):
     def __init__(self):
         self.initialized = False
 
-    def parse(self, fatstring):
+    def parse(self, fatstring, bytes_per_sector):
         '''
         Method to parse a FAT out of a string.  The string must be
         exactly 512*9 bytes long for this to succeed.
@@ -477,10 +477,10 @@ class FAT12(object):
         if self.initialized:
             raise PyFatException("This object is already initialized")
 
-        if len(fatstring) != 512 * 9:
+        if len(fatstring) != bytes_per_sector * 9:
             raise PyFatException("Invalid length on FAT12 string")
 
-        total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) / bytes per entry (1.5)
+        total_entries = bytes_per_sector * 9 / 1.5 # Total bytes in FAT (bytes_per_sector*9) / bytes per entry (1.5)
 
         self.fat = [0x0]*int(total_entries)
         self.fat[0] = 0xff0
@@ -502,7 +502,7 @@ class FAT12(object):
 
         self.initialized = True
 
-    def new(self):
+    def new(self, bytes_per_sector):
         '''
         A method to create a new FAT12.  All entries are initially set to 0
         (unallocated), except for the first two.
@@ -515,7 +515,7 @@ class FAT12(object):
         if self.initialized:
             raise PyFatException("This object is already initialized")
 
-        total_entries = 512 * 9 / 1.5 # Total bytes in FAT (512*9) / bytes per entry (1.5)
+        total_entries = bytes_per_sector * 9 / 1.5 # Total bytes in FAT (bytes_per_sector*9) / bytes per entry (1.5)
 
         self.fat = [0x0]*int(total_entries)
         self.fat[0] = 0xff0
@@ -550,7 +550,7 @@ class FAT12(object):
 
         return physical_clusters
 
-    def add_entry(self, length):
+    def add_entry(self, length, bytes_per_sector):
         '''
         A method to add a new entry to the FAT.  As many entries as necessary
         to cover the length will be allocated and linked together.
@@ -564,7 +564,7 @@ class FAT12(object):
             raise PyFatException("This object is not yet initialized")
 
         # Update the FAT to hold the data for the file
-        num_clusters = _ceiling_div(length, 512)
+        num_clusters = _ceiling_div(length, bytes_per_sector)
         first_cluster = None
 
         last = None
@@ -657,7 +657,7 @@ class FAT12(object):
             self.fat[curr] = 0
             curr = nextcluster
 
-    def record(self):
+    def record(self, bytes_per_sector):
         '''
         A method to generate a string representing this File Allocation Table.
 
@@ -670,7 +670,7 @@ class FAT12(object):
             raise PyFatException("This object is not yet initialized")
 
         ret = ''
-        for byte in range(0, 512*9, 3):
+        for byte in range(0, bytes_per_sector*9, 3):
             curr = byte * 2/3
             ret += struct.pack("=B", self.fat[curr] & 0xff)
             ret += struct.pack("=B", ((self.fat[curr] >> 8) | (self.fat[curr + 1] << 4)) & 0xff)
@@ -686,7 +686,7 @@ class FAT16(object):
     def __init__(self):
         self.initialized = False
 
-    def parse(self, fatstring):
+    def parse(self, fatstring, bytes_per_sector):
         '''
         Method to parse a FAT out of a string.  The string must be
         exactly 512*9 bytes long for this to succeed.
@@ -699,10 +699,10 @@ class FAT16(object):
         if self.initialized:
             raise PyFatException("This object is already initialized")
 
-        if len(fatstring) != 512 * 9:
+        if len(fatstring) != bytes_per_sector * 9:
             raise PyFatException("Invalid length on FAT16 string")
 
-        total_entries = 512 * 9 / 2 # Total bytes in FAT (512*9) / bytes per entry (2)
+        total_entries = bytes_per_sector * 9 / 2 # Total bytes in FAT (bytes_per_sector*9) / bytes per entry (2)
 
         self.fat = [0x0]*int(total_entries)
         self.fat[0] = 0xf8ff
@@ -717,7 +717,7 @@ class FAT16(object):
 
         self.initialized = True
 
-    def new(self):
+    def new(self, bytes_per_sector):
         '''
         A method to create a new FAT16.  All entries are initially set to 0
         (unallocated), except for the first two.
@@ -730,7 +730,7 @@ class FAT16(object):
         if self.initialized:
             raise PyFatException("This object is already initialized")
 
-        total_entries = 512 * 9 / 2 # Total bytes in FAT (512*9) / bytes per entry (2)
+        total_entries = bytes_per_sector * 9 / 2 # Total bytes in FAT (bytes_per_sector*9) / bytes per entry (2)
 
         self.fat = [0x0]*int(total_entries)
         self.fat[0] = 0xf8ff
@@ -765,7 +765,7 @@ class FAT16(object):
 
         return physical_clusters
 
-    def add_entry(self, length):
+    def add_entry(self, length, bytes_per_sector):
         '''
         A method to add a new entry to the FAT.  As many entries as necessary
         to cover the length will be allocated and linked together.
@@ -779,7 +779,7 @@ class FAT16(object):
             raise PyFatException("This object is not yet initialized")
 
         # Update the FAT to hold the data for the file
-        num_clusters = _ceiling_div(length, 512)
+        num_clusters = _ceiling_div(length, bytes_per_sector)
         first_cluster = None
 
         last = None
@@ -872,7 +872,7 @@ class FAT16(object):
             self.fat[curr] = 0
             curr = nextcluster
 
-    def record(self):
+    def record(self, bytes_per_sector):
         '''
         A method to generate a string representing this File Allocation Table.
 
@@ -885,7 +885,7 @@ class FAT16(object):
             raise PyFatException("This object is not yet initialized")
 
         ret = ''
-        for byte in range(0, 512*9, 2):
+        for byte in range(0, bytes_per_sector*9, 2):
             curr = byte / 2
             ret += struct.pack("=H", self.fat[curr])
 
@@ -1052,7 +1052,7 @@ class PyFat(object):
         self.bytes_per_cluster = self.bytes_per_sector * self.sectors_per_cluster
 
         self.fat = FAT12()
-        self.fat.parse(first_fat)
+        self.fat.parse(first_fat, self.bytes_per_sector)
 
         # Now walk the root directory entry
         self.root = FATDirectoryEntry()
@@ -1244,7 +1244,7 @@ class PyFat(object):
         self.root.new_root()
 
         self.fat = FAT12()
-        self.fat.new()
+        self.fat.new(self.bytes_per_sector)
 
         self.size_in_kb = size_in_kb
 
@@ -1299,7 +1299,7 @@ class PyFat(object):
         if len(ext) > 0 and ext[0] == '.':
             ext = ext[1:]
 
-        first_cluster = self.fat.add_entry(length)
+        first_cluster = self.fat.add_entry(length, self.bytes_per_sector)
 
         child = FATDirectoryEntry()
         child.new_file(infp, length, parent, name, ext, first_cluster)
@@ -1308,7 +1308,7 @@ class PyFat(object):
 
         # We only try to expand directories that are not the root.
         if parent.parent is not None:
-            if len(parent.children) > 1 and (len(parent.children) % (512/32)) == 1:
+            if len(parent.children) > 1 and (len(parent.children) % (self.bytes_per_sector/32)) == 1:
                 # Here, we need to add another entry to the FAT filesystem.
                 self.fat.expand_entry(parent.first_logical_cluster)
 
@@ -1328,7 +1328,7 @@ class PyFat(object):
 
         name, ext = os.path.splitext(filename)
 
-        first_cluster = self.fat.add_entry(self.bytes_per_cluster)
+        first_cluster = self.fat.add_entry(self.bytes_per_cluster, self.bytes_per_sector)
 
         child = FATDirectoryEntry()
         child.new_dir(parent, name, ext, first_cluster)
@@ -1345,7 +1345,7 @@ class PyFat(object):
 
         # We only try to expand directories that are not the root.
         if parent.parent is not None:
-            if len(parent.children) > 1 and (len(parent.children) % (512/32)) == 1:
+            if len(parent.children) > 1 and (len(parent.children) % (self.bytes_per_sector/32)) == 1:
                 # Here, we need to add another entry to the FAT filesystem.
                 self.fat.expand_entry(parent.first_logical_cluster)
 
@@ -1559,12 +1559,12 @@ class PyFat(object):
 
             # Now write out the first FAT
             outfp.seek(1 * self.bytes_per_sector)
-            outfp.write(self.fat.record())
+            outfp.write(self.fat.record(self.bytes_per_sector))
 
             if self.num_fats == 2:
                 # Now write out the second FAT
                 outfp.seek((1+self.sectors_per_fat) * self.bytes_per_sector)
-                outfp.write(self.fat.record())
+                outfp.write(self.fat.record(self.bytes_per_sector))
 
             # Now write out the directory entries
             # The first root directory sector is preceded by:
