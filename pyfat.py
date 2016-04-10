@@ -669,9 +669,8 @@ class FAT12(object):
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        ret = '\xf0\xff\xff'
-
-        for byte in range(3, 512*9, 3):
+        ret = ''
+        for byte in range(0, 512*9, 3):
             curr = byte * 2/3
             ret += struct.pack("=B", self.fat[curr] & 0xff)
             ret += struct.pack("=B", ((self.fat[curr] >> 8) | (self.fat[curr + 1] << 4)) & 0xff)
@@ -885,9 +884,8 @@ class FAT16(object):
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        ret = '\xf8\xff\xff\xff'
-
-        for byte in range(4, 512*9, 2):
+        ret = ''
+        for byte in range(0, 512*9, 2):
             curr = byte / 2
             ret += struct.pack("=H", self.fat[curr])
 
