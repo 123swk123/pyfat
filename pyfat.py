@@ -467,7 +467,7 @@ class FAT12(object):
     def parse(self, fatstring):
         '''
         Method to parse a FAT out of a string.  The string must be
-        exactly 32 bytes long for this to succeed.
+        exactly 512*9 bytes long for this to succeed.
 
         Parameters:
          fatstr - The string to parse.
@@ -679,6 +679,220 @@ class FAT12(object):
 
         return ret
 
+class FAT16(object):
+    '''
+    The class that represents the FAT (File Allocation Table) for this
+    filesystem.  This class represents the 16-bit FAT.
+    '''
+    def __init__(self):
+        self.initialized = False
+
+    def parse(self, fatstring):
+        '''
+        Method to parse a FAT out of a string.  The string must be
+        exactly 512*9 bytes long for this to succeed.
+
+        Parameters:
+         fatstr - The string to parse.
+        Returns:
+         Nothing.
+        '''
+        if self.initialized:
+            raise PyFatException("This object is already initialized")
+
+        if len(fatstring) != 512 * 9:
+            raise PyFatException("Invalid length on FAT16 string")
+
+        total_entries = 512 * 9 / 2 # Total bytes in FAT (512*9) / bytes per entry (2)
+
+        self.fat = [0x0]*int(total_entries)
+        self.fat[0] = 0xf8ff
+        self.fat[1] = 0xffff
+
+        curr = 2
+        while curr < total_entries:
+            offset = curr*2
+            (fat_entry) = struct.unpack("=H", fatstring[offset:offset+2])
+            self.fat[curr] = fat_entry
+            curr += 2
+
+        self.initialized = True
+
+    def new(self):
+        '''
+        A method to create a new FAT16.  All entries are initially set to 0
+        (unallocated), except for the first two.
+
+        Parameters:
+         None.
+        Returns:
+         Nothing.
+        '''
+        if self.initialized:
+            raise PyFatException("This object is already initialized")
+
+        total_entries = 512 * 9 / 2 # Total bytes in FAT (512*9) / bytes per entry (2)
+
+        self.fat = [0x0]*int(total_entries)
+        self.fat[0] = 0xf8ff
+        self.fat[1] = 0xffff
+
+        self.initialized = True
+
+    def get_cluster_list(self, first_logical_cluster):
+        '''
+        A method to get the physical cluster list, given the first logical
+        cluster in a chain.
+
+        Parameters:
+         first_logical_cluster - The logical cluster to start with.
+        Returns:
+         A list containing all of the physical cluster locations for this chain.
+        '''
+        # FIXME: we should make this a generator
+
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        physical_clusters = []
+        curr = first_logical_cluster
+        while True:
+            physical_clusters.append(33 + curr - 2)
+            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+                # This is the end!
+                break
+
+            curr = self.fat[curr]
+
+        return physical_clusters
+
+    def add_entry(self, length):
+        '''
+        A method to add a new entry to the FAT.  As many entries as necessary
+        to cover the length will be allocated and linked together.
+
+        Parameters:
+         length - The length of the entry to be allocated.
+        Returns:
+         The first logical cluster.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        # Update the FAT to hold the data for the file
+        num_clusters = _ceiling_div(length, 512)
+        first_cluster = None
+
+        last = None
+        curr = 2
+        while curr < len(self.fat) and num_clusters > 0:
+            if self.fat[curr] == 0x0:
+                if first_cluster is None:
+                    first_cluster = curr
+
+                if last is not None:
+                    self.fat[last] = curr
+
+                last = curr
+
+                num_clusters -= 1
+
+            curr += 1
+
+        if first_cluster is None or num_clusters != 0:
+            raise PyFatException("No space left on device")
+
+        # Set the last cluster
+        self.fat[last] = 0xffff
+
+        return first_cluster
+
+    def expand_entry(self, first_logical_cluster):
+        '''
+        A method to expand the number of clusters assigned to the entry starting
+        at the given logical cluster.
+
+        Parameters:
+         first_logical_cluster - The first logical cluster of the entry to expand.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        old_last_entry = None
+        curr = first_logical_cluster
+        while True:
+            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+                # OK, we've found the last entry for this entry.  Let's save
+                # the offset so we can come back and update it once we've found
+                # the new cluster.
+                old_last_entry = curr
+                break
+
+            curr = self.fat[curr]
+
+        if old_last_entry is None:
+            raise PyFatException("Old last entry not found!")
+
+        # Now that we have the old last entry, let's scan the entire FAT for
+        # a free cluster.
+        curr = 2
+        while curr < len(self.fat):
+            if self.fat[curr] == 0x0:
+                # OK we've found a free entry; update it to be the end, update
+                # the last entry to point to this, and get out of here.
+                self.fat[old_last_entry] = curr
+                self.fat[curr] = 0xffff
+                return
+
+            curr += 1
+
+        raise PyFatException("No space left on device")
+
+    def remove_entry(self, first_logical_cluster):
+        '''
+        A method to remove a chain of clusters from the FAT.
+
+        Parameters:
+         first_logical_cluster - The cluster to start from.
+        Returns:
+         Nothing.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        curr = first_logical_cluster
+        while True:
+            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+                # This is the end!
+                self.fat[curr] = 0
+                break
+
+            nextcluster = self.fat[curr]
+            self.fat[curr] = 0
+            curr = nextcluster
+
+    def record(self):
+        '''
+        A method to generate a string representing this File Allocation Table.
+
+        Parameters:
+         None.
+        Returns:
+         A string representing this File Allocation Table.
+        '''
+        if not self.initialized:
+            raise PyFatException("This object is not yet initialized")
+
+        ret = '\xf8\xff\xff\xff'
+
+        for byte in range(4, 512*9, 2):
+            curr = byte / 2
+            ret += struct.pack("=H", self.fat[curr])
+
+        return ret
+
 class PyFat(object):
     '''
     The main class to open or create FAT filesystems.
@@ -718,6 +932,8 @@ class PyFat(object):
             total_sectors = self.total_sector_count_32
 
         data_sec = total_sectors - (self.reserved_sectors + (self.num_fats * fat_size) + root_dir_sectors)
+        # FIXME: according to the FAT spec, count_of_clusters + 1 is the maximum
+        # valid cluster number for the volume.  We may want to save that value.
         count_of_clusters = data_sec / self.sectors_per_cluster
 
         if count_of_clusters < 4085:
