@@ -243,6 +243,10 @@ def check_manyfiles(fat, tmpdir, filesize):
     for i in range(19, int(512*9 / 1.5)):
         assert(fat.fat.fat[i] == 0x00)
 
+    # Test out list_dir
+    for f in fat.list_dir('/'):
+        pass
+
 def check_manyfiles_subdir(fat, tmpdir, filesize):
     assert(filesize == 1474560)
 
