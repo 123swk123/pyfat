@@ -694,6 +694,31 @@ class PyFat(object):
         self.orig_fp = None
         self.initialized = False
 
+    def _determine_fat_type(self):
+        # The following determines whether this is FAT12, FAT16, or FAT32
+        root_dir_sectors = ((self.max_root_dir_entries * 32) + (self.bytes_per_sector - 1)) / self.bytes_per_sector
+        if self.sectors_per_fat != 0:
+            fat_size = self.sectors_per_fat
+        else:
+            raise PyFatException("Only support FAT12 right now!")
+
+        if self.sector_count != 0:
+            total_sectors = self.sector_count
+        else:
+            total_sectors = self.total_sector_count_32
+
+        data_sec = total_sectors - (self.reserved_sectors + (self.num_fats * fat_size) + root_dir_sectors)
+        count_of_clusters = data_sec / self.sectors_per_cluster
+
+        if count_of_clusters < 4085:
+            fat_type = self.FAT12
+        elif count_of_clusters < 65525:
+            fat_type = self.FAT16
+        else:
+            fat_type = self.FAT32
+
+        return (root_dir_sectors, fat_type)
+
     def open(self, filename):
         '''
         A method to open up an existing FAT filesystem.
@@ -749,14 +774,20 @@ class PyFat(object):
         if self.num_fats not in [1, 2]:
             raise PyFatException("Expected 1 or 2 FATs")
 
-        if self.drive_num not in [0x00, 0x80]:
-            raise PyFatException("Invalid drive number")
-
-        if self.sectors_per_fat != 9:
-            raise PyFatException("Expected sectors per FAT to be 9")
-
+        # FIXME: according to the FAT spec, it looks like this can actually be
+        # non-zero for FAT12 and FAT16 iff the total number of sectors
+        # is >= 0x10000.  We should be able to handle that.
         if self.total_sector_count_32 != 0:
             raise PyFatException("Expected the total sector count 32 to be 0")
+
+        # FIXME: for FAT32 volumes, self.sectors_per_fat must be 0, so we should
+        # check for that here.
+
+        (self.root_dir_sectors, self.fat_type) = self._determine_fat_type()
+
+        # FIXME: this check only applies to FAT12 and FAT16 filesystems.
+        if self.drive_num not in [0x00, 0x80]:
+            raise PyFatException("Invalid drive number")
 
         if self.fs_type != "FAT12   ":
             raise PyFatException("Invalid filesystem type")
@@ -765,28 +796,6 @@ class PyFat(object):
             raise PyFatException("Invalid signature")
 
         self.size_in_kb = size_in_kb
-
-        # The following determines whether this is FAT12, FAT16, or FAT32
-        self.root_dir_sectors = ((self.max_root_dir_entries * 32) + (self.bytes_per_sector - 1)) / self.bytes_per_sector
-        if self.sectors_per_fat != 0:
-            fat_size = self.sectors_per_fat
-        else:
-            raise PyFatException("Only support FAT12 right now!")
-
-        if self.sector_count != 0:
-            total_sectors = self.sector_count
-        else:
-            total_sectors = self.total_sector_count_32
-
-        data_sec = total_sectors - (self.reserved_sectors + (self.num_fats * fat_size) + self.root_dir_sectors)
-        count_of_clusters = data_sec / self.sectors_per_cluster
-
-        if count_of_clusters < 4085:
-            self.fat_type = self.FAT12
-        elif count_of_clusters < 65525:
-            self.fat_type = self.FAT16
-        else:
-            self.fat_type = self.FAT32
 
         # Read the first FAT
         first_fat = self.orig_fp.read(self.bytes_per_sector * self.sectors_per_fat)
