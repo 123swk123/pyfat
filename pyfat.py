@@ -695,6 +695,16 @@ class PyFat(object):
         self.initialized = False
 
     def _determine_fat_type(self):
+        '''
+        An internal method to determine whether this volume is FAT12, FAT16,
+        or FAT32.  Note that this expects to be called *after* the common
+        BPB is parsed on the filesystem.
+
+        Parameters:
+         None
+        Returns:
+         A tuple containing the number of root directory sectors and the FAT type that this volume is.
+        '''
         # The following determines whether this is FAT12, FAT16, or FAT32
         root_dir_sectors = ((self.max_root_dir_entries * 32) + (self.bytes_per_sector - 1)) / self.bytes_per_sector
         if self.sectors_per_fat != 0:
