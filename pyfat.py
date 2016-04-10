@@ -1202,9 +1202,6 @@ class PyFat(object):
         if self.initialized:
             raise PyFatException("This object is already initialized")
 
-        if size_in_kb != 1440:
-            raise PyFatException("Only size 1440 disks supported")
-
         if drive_num not in [0x0, 0x80]:
             raise PyFatException("")
 
@@ -1227,7 +1224,7 @@ class PyFat(object):
         self.reserved_sectors = reserved_sectors
         self.num_fats = num_fats
         self.max_root_dir_entries = root_dir_entries
-        self.sector_count = 2880
+        self.sector_count = int(size_in_kb / (float(bytes_per_sector) / 1024))
         self.media = media
         self.sectors_per_fat = 9
         self.sectors_per_track = 18
