@@ -790,16 +790,28 @@ class PyFat(object):
              self.volume_label, self.fs_type, self.boot_code,
              sig) = struct.unpack("=BBBL11s8s448sH", boot_sector[36:])
 
-            if self.drive_num not in [0x00, 0x80]:
-                raise PyFatException("Invalid drive number")
+            if self.fs_type not in ["FAT12   ", "FAT16   ", "FAT     "]:
+                raise PyFatException("Invalid filesystem type")
+        else:
+            (self.fat_size_32, self.ext_flags, self.fs_ver, self.root_cluster,
+             self.fsinfo_sector_number, self.backup_boot_sector, unused1,
+             self.drive_num, unused2, self.boot_sig, self.volume_id,
+             self.volume_label, self.fs_type, unused3, sig) = struct.unpack("=LHHLHH12sBBBL11s8s420sH", boot_sector[36:])
 
-            if self.fs_type != "FAT12   ":
+            if self.fs_ver != 0:
+                raise PyFatException("Invalid filesystem version on FAT32")
+
+            if self.backup_boot_sector not in [0, 6]:
+                raise PyFatException("Invalid number of backup boot sectors")
+
+            if self.fs_type != "FAT32   ":
                 raise PyFatException("Invalid filesystem type")
 
-            if sig != 0xaa55:
-                raise PyFatException("Invalid signature")
-        else:
-            raise PyFatException("Only FAT12 and FAT16 supported right now")
+        if self.drive_num not in [0x00, 0x80]:
+            raise PyFatException("Invalid drive number")
+
+        if sig != 0xaa55:
+            raise PyFatException("Invalid signature")
 
         self.size_in_kb = size_in_kb
 
