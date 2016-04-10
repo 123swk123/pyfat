@@ -734,9 +734,9 @@ class PyFat(object):
         self.orig_fp = open(filename, 'rb')
 
         self.orig_fp.seek(0, os.SEEK_END)
-        size_in_kb = self.orig_fp.tell() / 1024
+        self.size_in_kb = self.orig_fp.tell() / 1024
 
-        if size_in_kb != 1440:
+        if self.size_in_kb != 1440:
             raise PyFatException("Only 1.44MB filesystems are supported")
 
         self.orig_fp.seek(0)
@@ -790,8 +790,10 @@ class PyFat(object):
              self.volume_label, self.fs_type, self.boot_code,
              sig) = struct.unpack("=BBBL11s8s448sH", boot_sector[36:])
 
-            if self.fs_type not in ["FAT12   ", "FAT16   ", "FAT     "]:
-                raise PyFatException("Invalid filesystem type")
+            if self.fat_type == self.FAT12 and self.fs_type not in ["FAT12   ", "FAT     "]:
+                raise PyFatException("Invalid filesystem type for FAT12")
+            if self.fat_type == self.FAT16 and self.fs_type not in ["FAT16   ", "FAT     "]:
+                raise PyFatException("Invalid filesystem type for FAT16")
         else:
             (self.fat_size_32, self.ext_flags, self.fs_ver, self.root_cluster,
              self.fsinfo_sector_number, self.backup_boot_sector, unused1,
@@ -805,15 +807,13 @@ class PyFat(object):
                 raise PyFatException("Invalid number of backup boot sectors")
 
             if self.fs_type != "FAT32   ":
-                raise PyFatException("Invalid filesystem type")
+                raise PyFatException("Invalid filesystem type for FAT32")
 
         if self.drive_num not in [0x00, 0x80]:
             raise PyFatException("Invalid drive number")
 
         if sig != 0xaa55:
             raise PyFatException("Invalid signature")
-
-        self.size_in_kb = size_in_kb
 
         # Read the first FAT
         first_fat = self.orig_fp.read(self.bytes_per_sector * self.sectors_per_fat)
