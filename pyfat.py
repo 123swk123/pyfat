@@ -960,9 +960,6 @@ class PyFat(object):
         self.orig_fp.seek(0, os.SEEK_END)
         self.size_in_kb = self.orig_fp.tell() / 1024
 
-        if self.size_in_kb != 1440:
-            raise PyFatException("Only 1.44MB filesystems are supported")
-
         self.orig_fp.seek(0)
 
         boot_sector = self.orig_fp.read(512)
@@ -1224,7 +1221,7 @@ class PyFat(object):
         self.reserved_sectors = reserved_sectors
         self.num_fats = num_fats
         self.max_root_dir_entries = root_dir_entries
-        self.sector_count = int(size_in_kb / (float(bytes_per_sector) / 1024))
+        self.sector_count = size_in_kb*1024 / 512
         self.media = media
         self.sectors_per_fat = 9
         self.sectors_per_track = 18
@@ -1629,6 +1626,8 @@ class PyFat(object):
             # Finally, truncate the file out to its final size
             outfp.truncate(self.size_in_kb * 1024)
             outfp.seek(-1, os.SEEK_END)
+            # FIXME: this could possibly overwrite the last byte on the volume.
+            # We should only do this if we aren't already at the end.
             outfp.write("\x00")
 
     def list_dir(self, path):
