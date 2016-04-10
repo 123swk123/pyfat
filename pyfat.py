@@ -1399,7 +1399,7 @@ class PyFat(object):
         rec, index = self._find_record(path)
 
         if not rec.is_dir():
-            raise PyIsoException("Record is not a directory!")
+            raise PyFatException("Record is not a directory!")
 
         for child in rec.children:
             yield child
