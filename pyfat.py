@@ -1221,13 +1221,17 @@ class PyFat(object):
         self.reserved_sectors = reserved_sectors
         self.num_fats = num_fats
         self.max_root_dir_entries = root_dir_entries
-        self.sector_count = size_in_kb*1024 / 512
+        self.sector_count = size_in_kb*1024 / self.bytes_per_sector
+        if self.sector_count > 65535:
+            self.total_sector_count_32 = self.sector_count
+            self.sector_count = 0
+        else:
+            self.total_sector_count_32 = 0
         self.media = media
         self.sectors_per_fat = 9
         self.sectors_per_track = 18
         self.num_heads = 2
         self.hidden_sectors = hidden_sectors
-        self.total_sector_count_32 = 0
         self.drive_num = drive_num
         self.boot_sig = 41
         self.volume_id = 4248983325
