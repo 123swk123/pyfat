@@ -337,8 +337,8 @@ class FATDirectoryEntry(object):
         if not self.initialized:
             raise PyFatException("This directory entry is not yet initialized")
 
-        return struct.pack("=8s3sBHHHHHHHHL", "{:<8}".format(self.filename),
-                           "{:<3}".format(self.extension),
+        return struct.pack("=8s3sBHHHHHHHHL", bytes("{:<8}".format(self.filename), 'utf-8'),
+                           bytes("{:<3}".format(self.extension), 'utf-8'),
                            self.attributes, 0, self.creation_time,
                            self.creation_date, self.last_access_date, 0,
                            self.last_write_time, self.last_write_date,
@@ -488,7 +488,7 @@ class FAT12(object):
 
         curr = 2
         while curr < total_entries:
-            offset = (3*curr)/2
+            offset = int((3*curr)/2)
             low, high = struct.unpack("=BB", fatstring[offset:offset+2])
             if curr % 2 == 0:
                 # even
@@ -669,9 +669,9 @@ class FAT12(object):
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        ret = ''
+        ret = b''
         for byte in range(0, bytes_per_sector*sectors_per_fat, 3):
-            curr = byte * 2/3
+            curr = int(byte * 2/3)
             ret += struct.pack("=B", self.fat[curr] & 0xff)
             ret += struct.pack("=B", ((self.fat[curr] >> 8) | (self.fat[curr + 1] << 4)) & 0xff)
             ret += struct.pack("=B", self.fat[curr + 1] & 0xff)
@@ -705,7 +705,7 @@ class FAT16(object):
         total_entries = bytes_per_sector * 9 / 2 # Total bytes in FAT (bytes_per_sector*9) / bytes per entry (2)
 
         self.fat = [0x0]*int(total_entries)
-        self.fat[0] = 0xf8ff
+        self.fat[0] = 0xfff8
         self.fat[1] = 0xffff
 
         curr = 2
@@ -733,7 +733,7 @@ class FAT16(object):
         total_entries = bytes_per_sector * sectors_per_fat / 2 # Total bytes in FAT (bytes_per_sector*9) / bytes per entry (2)
 
         self.fat = [0x0]*int(total_entries)
-        self.fat[0] = 0xf8ff
+        self.fat[0] = 0xfff8
         self.fat[1] = 0xffff
 
         self.initialized = True
@@ -757,7 +757,7 @@ class FAT16(object):
         curr = first_logical_cluster
         while True:
             physical_clusters.append(33 + curr - 2)
-            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+            if self.fat[curr] in [0xfff8, 0xfff9, 0xfffa, 0xfffb, 0xfffc, 0xfffd, 0xfffe, 0xffff]:
                 # This is the end!
                 break
 
@@ -822,7 +822,7 @@ class FAT16(object):
         old_last_entry = None
         curr = first_logical_cluster
         while True:
-            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+            if self.fat[curr] in [0xfff8, 0xfff9, 0xfffa, 0xfffb, 0xfffc, 0xfffd, 0xfffe, 0xffff]:
                 # OK, we've found the last entry for this entry.  Let's save
                 # the offset so we can come back and update it once we've found
                 # the new cluster.
@@ -863,7 +863,7 @@ class FAT16(object):
 
         curr = first_logical_cluster
         while True:
-            if self.fat[curr] in [0xff8, 0xff9, 0xffa, 0xffb, 0xffc, 0xffd, 0xffe, 0xfff]:
+            if self.fat[curr] in [0xfff8, 0xfff9, 0xfffa, 0xfffb, 0xfffc, 0xfffd, 0xfffe, 0xffff]:
                 # This is the end!
                 self.fat[curr] = 0
                 break
@@ -884,9 +884,9 @@ class FAT16(object):
         if not self.initialized:
             raise PyFatException("This object is not yet initialized")
 
-        ret = ''
+        ret = b''
         for byte in range(0, bytes_per_sector*sectors_per_fat, 2):
-            curr = byte / 2
+            curr = int(byte / 2)
             ret += struct.pack("=H", self.fat[curr])
 
         return ret
@@ -900,7 +900,7 @@ class PyFat(object):
     FAT32 = 2
 
     # This boot code was taken from dosfstools
-    BOOT_CODE = "\x0e\x1f\xbe\x5b\x7c\xac\x22\xc0\x74\x0b\x56\xb4\x0e\xbb\x07\x00\xcd\x10\x5e\xeb\xf0\x32\xe4\xcd\x16\xcd\x19\xeb\xfeThis is not a bootable disk.  Please insert a bootable floppy and\r\npress any key to try again ... \r\n"
+    BOOT_CODE = b"\x0e\x1f\xbe\x5b\x7c\xac\x22\xc0\x74\x0b\x56\xb4\x0e\xbb\x07\x00\xcd\x10\x5e\xeb\xf0\x32\xe4\xcd\x16\xcd\x19\xeb\xfeThis is not a bootable disk.  Please insert a bootable floppy and\r\npress any key to try again ... \r\n"
 
     def __init__(self):
         self.orig_fp = None
@@ -970,10 +970,10 @@ class PyFat(object):
          self.sectors_per_fat, self.sectors_per_track, self.num_heads,
          self.hidden_sectors, self.total_sector_count_32) = struct.unpack("=3s8sHBHBHHBHHHLL", boot_sector[:36])
 
-        if self.jmp_boot[0] == '\xEB':
-            if self.jmp_boot[2] != '\x90':
+        if self.jmp_boot[0] == 0xEB:
+            if self.jmp_boot[2] != 0x90:
                 raise PyFatException("Boot code must end with 0x90")
-        elif self.jmp_boot[0] == '\xE9':
+        elif self.jmp_boot[0] == 0xE9:
             pass
         else:
             raise PyFatException("Boot code must start with 0xEB or 0xE9")
@@ -997,7 +997,7 @@ class PyFat(object):
         # non-zero for FAT12 and FAT16 iff the total number of sectors
         # is >= 0x10000.  We should be able to handle that.
         if self.total_sector_count_32 != 0:
-            raise PyFatException("Expected the total sector count 32 to be 0")
+            raise PyFatException("Expected the total sector count 32 to be 0:" + hex(self.total_sector_count_32))
 
         # FIXME: for FAT32 volumes, self.sectors_per_fat must be 0, so we should
         # check for that here.
@@ -1053,7 +1053,7 @@ class PyFat(object):
 
         # Now walk the root directory entry
         self.root = FATDirectoryEntry()
-        self.root.parse('           \x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None, self.orig_fp)
+        self.root.parse(b'           \x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', None, self.orig_fp)
         root_cluster_list = []
         # The first root directory sector is preceded by:
         # BPB consisting of 1 sector
@@ -1078,10 +1078,10 @@ class PyFat(object):
                 dir_entry = data[read:read+32]
                 read += 32
 
-                if dir_entry[0] == '\x00':
+                if dir_entry[0] == b'\x00':
                     # Empty dir entry, done reading
                     break
-                elif dir_entry[0] == '\xe5':
+                elif dir_entry[0] == b'\xe5':
                     # Empty dir entry, skip to next one
                     continue
 
@@ -1214,14 +1214,14 @@ class PyFat(object):
         if sectors_per_cluster not in [1, 2, 4, 8, 16, 32, 64, 128]:
             raise PyFatException("Expected 1, 2, 4, 8, 16, 32, 64, or 128 sector per cluster")
 
-        self.jmp_boot = '\xeb\x3c\x90'
-        self.oem_name = 'pyfat   '
+        self.jmp_boot = b'\xeb\x3c\x90'
+        self.oem_name = b'pyfat   '
         self.bytes_per_sector = bytes_per_sector
         self.sectors_per_cluster = sectors_per_cluster
         self.reserved_sectors = reserved_sectors
         self.num_fats = num_fats
         self.max_root_dir_entries = root_dir_entries
-        self.sector_count = size_in_kb*1024 / self.bytes_per_sector
+        self.sector_count = int(size_in_kb*1024 / self.bytes_per_sector)
         if self.sector_count > 65535:
             self.total_sector_count_32 = self.sector_count
             self.sector_count = 0
@@ -1235,16 +1235,16 @@ class PyFat(object):
         self.drive_num = drive_num
         self.boot_sig = 41
         self.volume_id = 4248983325
-        self.volume_label = "NO NAME    "
-        self.fs_type = "FAT12   "
+        self.volume_label = b"NO NAME    "
+        self.fs_type = b"FAT16   "
         self.boot_code = self.BOOT_CODE
         self.bytes_per_cluster = self.bytes_per_sector * self.sectors_per_cluster
-        self.root_dir_sectors = ((self.max_root_dir_entries * 32) + (self.bytes_per_sector - 1)) / self.bytes_per_sector
+        self.root_dir_sectors = int(((self.max_root_dir_entries * 32) + (self.bytes_per_sector - 1)) / self.bytes_per_sector)
 
         self.root = FATDirectoryEntry()
         self.root.new_root()
 
-        self.fat = FAT12()
+        self.fat = FAT16()
         self.fat.new(self.bytes_per_sector, self.sectors_per_fat)
 
         self.size_in_kb = size_in_kb
@@ -1582,12 +1582,12 @@ class PyFat(object):
                 currdir, physical_clusters = dirs.popleft()
 
                 cluster_iter = iter(physical_clusters)
-                outfp.seek(cluster_iter.next() * self.bytes_per_cluster)
+                outfp.seek(cluster_iter.__next__() * self.bytes_per_cluster)
                 cluster_offset = 0
                 for child in currdir.children:
                     if cluster_offset + 32 > 512:
                         cluster_offset = 0
-                        outfp.seek(cluster_iter.next() * self.bytes_per_cluster)
+                        outfp.seek(cluster_iter.__next__() * self.bytes_per_cluster)
 
                     outfp.write(child.record())
                     cluster_offset += 32
@@ -1632,7 +1632,7 @@ class PyFat(object):
             outfp.seek(-1, os.SEEK_END)
             # FIXME: this could possibly overwrite the last byte on the volume.
             # We should only do this if we aren't already at the end.
-            outfp.write("\x00")
+            outfp.write(b"\x00")
 
     def list_dir(self, path):
         '''
